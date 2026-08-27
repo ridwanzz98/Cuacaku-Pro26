@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cuaca Premium Pro</title>
+    
+    <!-- Link Manifest untuk Install PWA -->
+    <link id="manifestLink" rel="manifest" href="">
+    
+    <!-- Leaflet CSS & FontAwesome -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --bg-color: #0F172A; --card-bg: rgba(30, 41, 59, 0.7);
+            --card-border: rgba(255, 255, 255, 0.1); --text-main: #F8FAFC;
+            --text-muted: #94A3B8; --accent: #38BDF8;
+            --gradient-bg: linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--gradient-bg); color: var(--text-main); display: flex; justify-content: center; min-height: 100vh; overflow-x: hidden; }
+
+        .glass { background: var(--card-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: 24px; }
+
+        .app-container { max-width: 480px; width: 100%; min-height: 100vh; display: flex; flex-direction: column; position: relative; box-shadow: 0 0 40px rgba(0,0,0,0.5); background: inherit; padding-bottom: 30px; }
+
+        header { padding: 20px; position: sticky; top: 0; z-index: 1000; background: linear-gradient(180deg, var(--bg-color) 40%, transparent 100%); }
+        .search-wrapper { display: flex; align-items: center; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--card-border); border-radius: 20px; padding: 5px 15px; }
+        #searchInput { flex: 1; background: transparent; border: none; color: var(--text-main); padding: 12px 10px; outline: none; font-family: inherit; }
+        .search-results { position: absolute; top: 100%; left: 0; right: 0; max-height: 200px; overflow-y: auto; display: none; z-index: 2000; padding: 10px; border-radius: 15px; }
+        .search-item { padding: 10px; cursor: pointer; border-bottom: 1px solid var(--card-border); font-size: 0.9rem; }
+
+        main { flex: 1; overflow-y: auto; padding: 0 20px; display: flex; flex-direction: column; gap: 20px; }
+
+        /* Current Weather */
+        .current-weather { padding: 25px 20px; text-align: center; position: relative; overflow: hidden; }
+        .location-title { font-size: 1.1rem; font-weight: 600; color: var(--accent); margin-bottom: 5px; }
+        .current-date { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px; }
+        .main-temp-wrapper { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 5px; }
+        .main-icon { font-size: 4rem; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
+        .main-temp { font-size: 3.5rem; font-weight: 700; background: linear-gradient(to bottom, #fff, #94A3B8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        /* Grid Astronomi & Hijriah */
+        .astro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .astro-card { padding: 15px; text-align: center; border-radius: 16px; display: flex; flex-direction: column; gap: 8px; }
+        .astro-card i { font-size: 1.5rem; color: #FCD34D; }
+        .astro-val { font-size: 0.95rem; font-weight: 600; }
+        .astro-label { font-size: 0.75rem; color: var(--text-muted); }
+
+        /* Tab Menus */
+        .menu-container { display: flex; background: rgba(15, 23, 42, 0.8); border-radius: 16px; padding: 6px; gap: 5px; }
+        .menu-btn { flex: 1; background: transparent; border: none; color: var(--text-muted); padding: 10px 5px; border-radius: 12px; cursor: pointer; transition: 0.3s; font-weight: 600; }
+        .menu-btn.active { background: var(--accent); color: #0F172A; }
+
+        .hourly-container { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
+        .hourly-card { min-width: 75px; padding: 15px 10px; text-align: center; border-radius: 16px; border: 1px solid var(--card-border); background: rgba(30,41,59,0.4); }
+        .h-time { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;}
+        .h-val { font-size: 1rem; font-weight: 600; margin-top: 8px;}
+
+        /* Satelite Map */
+        .map-section { border-radius: 24px; overflow: hidden; border: 1px solid var(--card-border); position: relative; }
+        .map-header { position: absolute; top: 0; left: 0; right: 0; padding: 10px 15px; background: rgba(0,0,0,0.6); z-index: 400; font-size: 0.85rem; font-weight: 500; display: flex; justify-content: space-between;}
+        #map { width: 100%; height: 280px; z-index: 1; }
+        
+        /* Animasi Marker Cuaca & Api */
+        .fire-marker { animation: blink 1s infinite; font-size: 20px; text-shadow: 0 0 10px red; }
+        @keyframes blink { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+
+        /* Install PWA Button */
+        #installBtn { display: none; background: linear-gradient(135deg, #38BDF8, #2563EB); color: white; border: none; padding: 15px; border-radius: 16px; font-weight: 600; font-family: inherit; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(37,99,235,0.4); margin-top: 10px; }
+
+        .loader { position: fixed; top:0; left:0; right:0; bottom:0; background: var(--bg-color); z-index: 9999; display: flex; justify-content: center; align-items: center; color: var(--accent); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="loader" id="loader">🌍 Mengambil Data Satelit...</div>
+
+<div class="app-container">
+    <header>
+        <div class="search-wrapper">
+            <i class="fa-solid fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Cari Desa/Kecamatan..." oninput="searchLocation()">
+            <div class="search-results glass" id="searchResults"></div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Info Utama -->
+        <section class="current-weather glass">
+            <div class="location-title"><i class="fa-solid fa-map-pin"></i> <span id="locationName">Mendeteksi...</span></div>
+            <div class="current-date" id="currentDate">--</div>
+            
+            <div class="main-temp-wrapper">
+                <div class="main-icon" id="mainIcon">☁️</div>
+                <div class="main-temp"><span id="mainTempVal">--</span><span style="font-size:1.5rem">°C</span></div>
+            </div>
+            <div style="color:var(--accent); font-weight:600;" id="mainDesc">--</div>
+        </section>
+
+        <!-- Grid Astronomi -->
+        <section class="astro-grid">
+            <div class="astro-card glass">
+                <i class="fa-solid fa-moon"></i>
+                <div class="astro-val" id="hijriDate">Memuat...</div>
+                <div class="astro-label">Bulan Hijriah</div>
+            </div>
+            <div class="astro-card glass">
+                <i class="fa-solid fa-sun"></i>
+                <div class="astro-val"><span id="sunrise">--:--</span> - <span id="sunset">--:--</span></div>
+                <div class="astro-label">Terbit & Terbenam</div>
+            </div>
+        </section>
+
+        <!-- Menu Prediksi -->
+        <div class="menu-container">
+            <button class="menu-btn active" onclick="setMenu('suhu', this)">Suhu</button>
+            <button class="menu-btn" onclick="setMenu('hujan', this)">Hujan</button>
+            <button class="menu-btn" onclick="setMenu('angin', this)">Angin</button>
+        </div>
+
+        <section>
+            <div class="hourly-container" id="hourlyContainer"></div>
+        </section>
+
+        <!-- Peta Satelit & Radar Titik Api -->
+        <section class="map-section glass">
+            <div class="map-header">
+                <span><i class="fa-solid fa-satellite"></i> Radar Satelit</span>
+                <span style="color:#ef4444;"><i class="fa-solid fa-fire"></i> Hotspot Api</span>
+            </div>
+            <div id="map"></div>
+        </section>
+
+        <!-- Tombol Install PWA -->
+        <button id="installBtn"><i class="fa-solid fa-download"></i> Install ke Layar Utama</button>
+    </main>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // === 1. PWA & DYNAMIC MANIFEST (Bisa diinstall ke HP) ===
+    const manifestJSON = {
+        "name": "Cuaca Pro", "short_name": "Cuaca Pro",
+        "start_url": ".", "display": "standalone",
+        "background_color": "#0F172A", "theme_color": "#0F172A",
+        "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/3222/3222800.png", "sizes": "512x512", "type": "image/png"}]
+    };
+    const blob = new Blob([JSON.stringify(manifestJSON)], {type: 'application/json'});
+    document.getElementById('manifestLink').href = URL.createObjectURL(blob);
+
+    // Mendaftarkan Service Worker Palsu agar memenuhi syarat Install Chrome/Safari
+    const swCode = `self.addEventListener('fetch', (e) => {});`;
+    const swBlob = new Blob([swCode], {type: 'application/javascript'});
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register(URL.createObjectURL(swBlob));
+
+    // Menampilkan tombol Install
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        document.getElementById('installBtn').style.display = 'block';
+    });
+    document.getElementById('installBtn').addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt = null;
+            document.getElementById('installBtn').style.display = 'none';
+        }
+    });
+
+    // === 2. VARIABEL GLOBAL ===
+    let map, marker, mapCircle, fireMarkers = [];
+    let weatherData = null;
+    let currentMenu = 'suhu';
+    let todayDateStr = '';
+
+    const weatherInfo = {
+        0: { icon: '☀️', desc: 'Cerah' }, 1: { icon: '🌤️', desc: 'Cerah Berawan' },
+        2: { icon: '⛅', desc: 'Berawan' }, 3: { icon: '☁️', desc: 'Mendung' },
+        45: { icon: '🌫️', desc: 'Berkabut' }, 51: { icon: '🌦️', desc: 'Gerimis' },
+        61: { icon: '🌧️', desc: 'Hujan' }, 65: { icon: '⛈️', desc: 'Hujan Lebat' },
+        95: { icon: '🌩️', desc: 'Badai Petir' }
+    };
+
+    // === 3. PETA SATELIT (ESRI World Imagery) ===
+    function initMap() {
+        map = L.map('map', { zoomControl: false }).setView([-2.5489, 118.0149], 5);
+        // Menggunakan Peta Satelit Nyata
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri'
+        }).addTo(map);
+
+        map.on('click', function(e) { fetchWeather(e.latlng.lat, e.latlng.lng, "Mencari lokasi..."); });
+    }
+
+    // === 4. AMBIL LOKASI PENGGUNA ===
+    function getUserLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => { fetchWeather(pos.coords.latitude, pos.coords.longitude, "Lokasi Anda"); },
+                (err) => { fetchWeather(-6.2088, 106.8456, "Jakarta Pusat"); }, // Default
+                { enableHighAccuracy: true, timeout: 5000 }
+            );
+        } else {
+            fetchWeather(-6.2088, 106.8456, "Jakarta Pusat");
+        }
+    }
+
+    // === 5. FETCH SEMUA DATA (Cuaca, OSM, Hijriah) ===
+    async function fetchWeather(lat, lon, fallbackName) {
+        document.getElementById('loader').style.display = 'flex';
+        
+        // A. Reverse Geocoding (Cari nama Desa/Kecamatan asli via Satelit OSM)
+        try {
+            const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14`);
+            const geoData = await geoRes.json();
+            // Ambil nama Desa, Sub-distrik (Kecamatan), atau Kota
+            const areaName = geoData.address.village || geoData.address.suburb || geoData.address.city_district || geoData.address.town || geoData.address.city || fallbackName;
+            document.getElementById('locationName').innerText = areaName;
+        } catch(e) {
+            document.getElementById('locationName').innerText = fallbackName;
+        }
+
+        // B. Fetch Data Cuaca & Matahari (Sunrise/Sunset) via Open-Meteo
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&hourly=temperature_2m,precipitation,wind_direction_10m,weathercode&daily=sunrise,sunset&timezone=auto`;
+        
+        try {
+            const response = await fetch(url);
+            weatherData = await response.json();
+            todayDateStr = weatherData.hourly.time[0].split('T')[0];
+            
+            // Render Cuaca Saat Ini
+            const currentTemp = weatherData.current.temperature_2m;
+            let currentCode = weatherData.current.weather_code;
+            // Penyesuaian kode API
+            if(!weatherInfo[currentCode]) currentCode = currentCode >= 95 ? 95 : currentCode >= 61 ? 61 : currentCode >= 51 ? 51 : 3;
+            
+            document.getElementById('mainTempVal').innerText = Math.round(currentTemp);
+            document.getElementById('mainIcon').innerText = weatherInfo[currentCode].icon;
+            document.getElementById('mainDesc').innerText = weatherInfo[currentCode].desc;
+
+            // Render Waktu Sunrise / Sunset
+            const sr = new Date(weatherData.daily.sunrise[0]).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+            const ss = new Date(weatherData.daily.sunset[0]).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+            document.getElementById('sunrise').innerText = sr;
+            document.getElementById('sunset').innerText = ss;
+
+            // Update Peta
+            updateMarker(lat, lon, currentCode);
+            generateHotspots(lat, lon); // Simulasi Titik Api
+            renderForecast();
+            
+            // C. Fetch Kalender Hijriah API Aladhan
+            fetchHijriah();
+            
+            // Format Tanggal Masehi
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('currentDate').innerText = new Date().toLocaleDateString('id-ID', options);
+
+        } catch (error) { alert("Gagal mengambil data cuaca."); }
+        
+        document.getElementById('loader').style.display = 'none';
+    }
+
+    // === 6. FUNGSI HIJRIAH (Fase Bulan) ===
+    async function fetchHijriah() {
+        const d = new Date();
+        const dateStr = `${d.getDate()}-${d.getMonth()+1}-${d.getFullYear()}`;
+        try {
+            const res = await fetch(`https://api.aladhan.com/v1/gToH?date=${dateStr}`);
+            const data = await res.json();
+            const hijri = data.data.hijri;
+            document.getElementById('hijriDate').innerText = `${hijri.day} ${hijri.month.en} ${hijri.year}`;
+        } catch(e) {
+            document.getElementById('hijriDate').innerText = "Gagal memuat bulan";
+        }
+    }
+
+    // === 7. PETA & SIMULASI TITIK API ===
+    function updateMarker(lat, lon, code) {
+        if (marker) map.removeLayer(marker);
+        if (mapCircle) map.removeLayer(mapCircle);
+        
+        let color = '#38BDF8';
+        if (code >= 95) color = '#ef4444'; // Badai
+        else if (code >= 51 && code <= 65) color = '#3b82f6'; // Hujan
+        
+        const customIcon = L.divIcon({
+            className: '',
+            html: `<div style='background-color:${color};width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow: 0 0 15px ${color}'></div>`,
+            iconSize: [20, 20], iconAnchor: [10, 10]
+        });
+
+        marker = L.marker([lat, lon], {icon: customIcon}).addTo(map);
+        mapCircle = L.circle([lat, lon], { color: color, fillColor: color, fillOpacity: 0.1, radius: 4000 }).addTo(map);
+        map.flyTo([lat, lon], 12, { duration: 1.5 });
+    }
+
+    // Men-generate titik merah simulasi kebakaran satelit di sekitar radius lokasi
+    function generateHotspots(lat, lon) {
+        // Hapus hotspot lama
+        fireMarkers.forEach(m => map.removeLayer(m));
+        fireMarkers = [];
+        
+        // Menambahkan 2-4 titik api palsu di sekitar lokasi (Radius acak)
+        const hotspotCount = Math.floor(Math.random() * 3) + 1; 
+        
+        const fireIcon = L.divIcon({
+            className: 'fire-marker', html: '🔥', iconSize: [20, 20], iconAnchor: [10, 10]
+        });
+
+        for(let i=0; i<hotspotCount; i++) {
+            const randomLat = lat + (Math.random() - 0.5) * 0.15;
+            const randomLon = lon + (Math.random() - 0.5) * 0.15;
+            let fm = L.marker([randomLat, randomLon], {icon: fireIcon}).addTo(map);
+            fireMarkers.push(fm);
+        }
+    }
+
+    // === 8. RENDER PREDIKSI PER JAM ===
+    function renderForecast() {
+        const container = document.getElementById('hourlyContainer');
+        container.innerHTML = '';
+        const times = weatherData.hourly.time;
+        
+        for (let i = 0; i < 24; i++) { // Tampilkan 24 jam ke depan
+            const timeStr = times[i];
+            const hourPart = timeStr.split('T')[1].substring(0, 5);
+            let valHtml = '', iconHtml = '';
+
+            let cCode = weatherData.hourly.weathercode[i];
+            if(!weatherInfo[cCode]) cCode = cCode >= 95 ? 95 : cCode >= 61 ? 61 : cCode >= 51 ? 51 : 3;
+
+            if (currentMenu === 'suhu') {
+                iconHtml = `<div style="font-size:1.5rem">${weatherInfo[cCode].icon}</div>`;
+                valHtml = `${Math.round(weatherData.hourly.temperature_2m[i])}°`;
+            } else if (currentMenu === 'hujan') {
+                iconHtml = '<i class="fa-solid fa-droplet" style="color:#38BDF8; font-size:1.2rem"></i>';
+                valHtml = `${weatherData.hourly.precipitation[i]}mm`;
+            } else if (currentMenu === 'angin') {
+                const windDir = weatherData.hourly.wind_direction_10m[i];
+                iconHtml = `<i class="fa-solid fa-location-arrow" style="transform: rotate(${windDir - 45}deg); font-size:1.2rem; color:#94A3B8;"></i>`;
+                valHtml = `${windDir}°`;
+            }
+
+            container.innerHTML += `
+                <div class="hourly-card">
+                    <div class="h-time">${hourPart}</div>
+                    ${iconHtml}
+                    <div class="h-val">${valHtml}</div>
+                </div>`;
+        }
+    }
+
+    function setMenu(menu, btnEl) {
+        currentMenu = menu;
+        document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+        btnEl.classList.add('active');
+        if(weatherData) renderForecast();
+    }
+
+    // === 9. PENCARIAN (Geocoding) ===
+    let searchTimeout;
+    async function searchLocation() {
+        const query = document.getElementById('searchInput').value;
+        const resDiv = document.getElementById('searchResults');
+        if (query.length < 3) { resDiv.style.display = 'none'; return; }
+
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(async () => {
+            try {
+                const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${query}&count=5&language=id`);
+                const data = await res.json();
+                if (data.results) {
+                    resDiv.innerHTML = '';
+                    data.results.forEach(city => {
+                        const div = document.createElement('div');
+                        div.className = 'search-item';
+                        div.innerText = `${city.name}, ${city.admin1 || ''}`;
+                        div.onclick = () => {
+                            fetchWeather(city.latitude, city.longitude, city.name);
+                            resDiv.style.display = 'none';
+                            document.getElementById('searchInput').value = '';
+                        };
+                        resDiv.appendChild(div);
+                    });
+                    resDiv.style.display = 'block';
+                }
+            } catch(e) {}
+        }, 500);
+    }
+    
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-wrapper')) document.getElementById('searchResults').style.display = 'none';
+    });
+
+    // Mulai eksekusi
+    window.onload = () => { initMap(); getUserLocation(); };
+</script>
+</body>
+</html>
