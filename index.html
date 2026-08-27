@@ -205,7 +205,7 @@
             navigator.geolocation.getCurrentPosition(
                 (pos) => { fetchWeather(pos.coords.latitude, pos.coords.longitude, "Lokasi Anda"); },
                 (err) => { fetchWeather(-6.2088, 106.8456, "Jakarta Pusat"); }, // Default
-                { enableHighAccuracy: true, timeout: 5000 }
+                { enableHighAccuracy: true, timeout: 15000 }
             );
         } else {
             fetchWeather(-6.2088, 106.8456, "Jakarta Pusat");
