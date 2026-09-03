@@ -3,679 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#07111f">
-    <meta name="description" content="CUACAKU - Prakiraan cuaca modern berdasarkan lokasi Anda">
-    <title>CUACAKU — Prakiraan Cuaca</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-<!-- LEAFLET MAP -->
-<link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-/>
-    <link rel="stylesheet" href="style.css">
+    <title>Prakiraan Cuaca Lokal</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #74ebd5 0%, #9face6 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+        .weather-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .location {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        .sub-location {
+            font-size: 1em;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+        .temperature {
+            font-size: 4em;
+            font-weight: bold;
+            margin: 10px 0;
+            color: #e74c3c;
+        }
+        .description {
+            font-size: 1.2em;
+            text-transform: capitalize;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .details {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            font-size: 0.9em;
+        }
+        .detail-value {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #2980b9;
+        }
+        #loading {
+            font-size: 1.2em;
+            color: #34495e;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
-
 <body>
 
-    <div class="app-shell">
-
-        <!-- SIDEBAR DESKTOP -->
-        <aside class="sidebar">
-
-            <div class="brand">
-                <div class="brand-icon">
-                    <span>☁</span>
+    <div class="weather-card">
+        <div id="loading">Meminta akses lokasi...<br><small>Pastikan GPS Anda aktif</small></div>
+        
+        <div id="weather-content" class="hidden">
+            <div class="location" id="kecamatan-name">Kecamatan</div>
+            <div class="sub-location" id="city-name">Kota/Kabupaten</div>
+            <div class="temperature"><span id="temp-value">--</span>°C</div>
+            <div class="description" id="weather-desc">Memuat cuaca...</div>
+            
+            <div class="details">
+                <div class="detail-item">
+                    <span>Angin</span>
+                    <span class="detail-value"><span id="wind-speed">--</span> km/h</span>
                 </div>
-
-                <div>
-                    <h1>CUACAKU</h1>
-                    <p>Weather Intelligence</p>
+                <div class="detail-item">
+                    <span>Arah Angin</span>
+                    <span class="detail-value"><span id="wind-dir">--</span>°</span>
                 </div>
             </div>
-
-            <nav class="side-nav">
-                <a href="#dashboard" class="nav-item active">
-                    <span class="nav-icon">⌂</span>
-                    <span>Dashboard</span>
-                </a>
-
-                <a href="#hourly" class="nav-item">
-                    <span class="nav-icon">◷</span>
-                    <span>Per Jam</span>
-                </a>
-
-                <a href="#forecast" class="nav-item">
-                    <span class="nav-icon">▦</span>
-                    <span>Prakiraan</span>
-                </a>
-
-                <a href="#details" class="nav-item">
-                    <span class="nav-icon">◉</span>
-                    <span>Detail Cuaca</span>
-                </a>
-            </nav>
-
-            <div class="sidebar-bottom">
-                <div class="data-source">
-                    <span class="source-dot"></span>
-                    <div>
-                        <small>Sumber Data</small>
-                        <strong>Weather API</strong>
-                    </div>
-                </div>
-
-                <button class="sidebar-settings" id="settingsButton">
-                    ⚙ <span>Pengaturan</span>
-                </button>
-            </div>
-
-        </aside>
-
-
-        <!-- MAIN CONTENT -->
-        <main class="main-content">
-
-            <!-- TOP HEADER -->
-            <header class="topbar">
-
-                <div class="mobile-brand">
-                    <div class="brand-icon small">
-                        <span>☁</span>
-                    </div>
-                    <strong>CUACAKU</strong>
-                </div>
-
-                <div class="top-location">
-                    <span class="location-pin">⌖</span>
-
-                    <div>
-                        <span class="label">LOKASI SAAT INI</span>
-                        <strong id="topLocation">Mendeteksi lokasi...</strong>
-                    </div>
-                </div>
-
-                <div class="top-actions">
-
-                    <div class="update-status">
-                        <span class="status-dot"></span>
-                        <span id="updateText">Data diperbarui sekarang</span>
-                    </div>
-
-                    <button class="icon-button" id="refreshButton" title="Perbarui data">
-                        ↻
-                    </button>
-
-                    <button class="profile-button">
-                        <span>☀</span>
-                    </button>
-
-                </div>
-
-            </header>
-
-
-            <!-- CONTENT -->
-            <div class="content-wrapper">
-
-                <!-- LOCATION HERO -->
-                <section class="location-card">
-
-                    <div class="location-main">
-
-                        <div class="location-icon">⌖</div>
-
-                        <div>
-                            <span class="section-label">LOKASI ANDA</span>
-
-                            <h2 id="locationName">
-                                Batupanga Daala
-                            </h2>
-
-                            <p id="locationAddress">
-                                Kecamatan Luyo, Kabupaten Polewali Mandar
-                            </p>
-
-                            <small id="coordinates">
-                                Latitude — • Longitude —
-                            </small>
-                        </div>
-
-                    </div>
-
-                    <button class="location-button" id="locationButton">
-                        <span>⌖</span>
-                        Gunakan Lokasi Saya
-                    </button>
-
-                </section>
-<!-- LOCATION MAP -->
-<section class="map-section">
-
-    <div class="section-heading">
-        <div>
-            <span class="section-label">LOKASI GPS</span>
-            <h2>Posisi Anda di Peta</h2>
-        </div>
-
-        <div class="map-status">
-            <span class="map-status-dot"></span>
-            GPS Aktif
         </div>
     </div>
 
-    <div class="map-card">
-
-        <div id="weatherMap"></div>
-
-        <div class="map-overlay">
-
-            <div class="map-location-info">
-                <span class="map-pin">⌖</span>
-
-                <div>
-                    <strong id="mapLocationName">
-                        Mendeteksi lokasi...
-                    </strong>
-
-                    <small id="mapCoordinates">
-                        Latitude — • Longitude —
-                    </small>
-                </div>
-            </div>
-
-        </div>
-
-    </div>
-
-</section>
-
-
-<!-- CURRENT WEATHER -->
-<section class="weather-hero" id="dashboard">
-
-                <!-- CURRENT WEATHER -->
-                <section class="weather-hero" id="dashboard">
-
-                    <div class="hero-glow glow-one"></div>
-                    <div class="hero-glow glow-two"></div>
-
-                    <div class="hero-left">
-
-                        <span class="section-label light">
-                            KONDISI CUACA SAAT INI
-                        </span>
-
-                        <div class="current-temperature">
-                            <span id="currentTemp">29</span>
-                            <sup>°C</sup>
-                        </div>
-
-                        <h2 id="weatherDescription">
-                            Cerah Berawan
-                        </h2>
-
-                        <p>
-                            Terasa seperti
-                            <strong id="feelsLike">32°C</strong>
-                        </p>
-
-                        <div class="hero-time">
-                            <span>◷</span>
-                            <span id="currentDate">
-                                Kamis, 3 September 2026
-                            </span>
-                        </div>
-
-                    </div>
-
-                    <div class="hero-weather-icon" id="weatherIcon">
-                        ☀️
-                    </div>
-
-                </section>
-
-
-                <!-- WEATHER STATS -->
-                <section class="stats-grid" id="details">
-
-                    <article class="stat-card">
-
-                        <div class="stat-top">
-                            <div class="stat-icon temperature">🌡️</div>
-                            <span class="stat-title">SUHU</span>
-                        </div>
-
-                        <div class="stat-value">
-                            29<span>°C</span>
-                        </div>
-
-                        <p>Suhu udara saat ini</p>
-
-                    </article>
-
-
-                    <article class="stat-card">
-
-                        <div class="stat-top">
-                            <div class="stat-icon humidity">💧</div>
-                            <span class="stat-title">KELEMBAPAN</span>
-                        </div>
-
-                        <div class="stat-value">
-                            78<span>%</span>
-                        </div>
-
-                        <p>Kelembapan udara</p>
-
-                    </article>
-
-
-                    <article class="stat-card">
-
-                        <div class="stat-top">
-                            <div class="stat-icon wind">💨</div>
-                            <span class="stat-title">ANGIN</span>
-                        </div>
-
-                        <div class="stat-value">
-                            12<span> km/j</span>
-                        </div>
-
-                        <p>Arah Timur Laut</p>
-
-                    </article>
-
-
-                    <article class="stat-card">
-
-                        <div class="stat-top">
-                            <div class="stat-icon rain">🌧️</div>
-                            <span class="stat-title">HUJAN</span>
-                        </div>
-
-                        <div class="stat-value">
-                            30<span>%</span>
-                        </div>
-
-                        <p>Peluang hujan</p>
-
-                    </article>
-
-                </section>
-
-
-                <!-- HOURLY FORECAST -->
-                <section class="section-block" id="hourly">
-
-                    <div class="section-heading">
-
-                        <div>
-                            <span class="section-label">TIMELINE CUACA</span>
-                            <h2>Prakiraan Per Jam</h2>
-                        </div>
-
-                        <button class="view-button">
-                            Lihat Detail →
-                        </button>
-
-                    </div>
-
-
-                    <div class="hourly-container">
-
-                        <article class="hour-card active">
-                            <span>15:00</span>
-                            <strong>☀️</strong>
-                            <b>29°</b>
-                            <small>30%</small>
-                        </article>
-
-                        <article class="hour-card">
-                            <span>18:00</span>
-                            <strong>🌦️</strong>
-                            <b>27°</b>
-                            <small>60%</small>
-                        </article>
-
-                        <article class="hour-card">
-                            <span>21:00</span>
-                            <strong>🌧️</strong>
-                            <b>25°</b>
-                            <small>70%</small>
-                        </article>
-
-                        <article class="hour-card">
-                            <span>00:00</span>
-                            <strong>🌧️</strong>
-                            <b>24°</b>
-                            <small>65%</small>
-                        </article>
-
-                        <article class="hour-card">
-                            <span>03:00</span>
-                            <strong>🌦️</strong>
-                            <b>24°</b>
-                            <small>50%</small>
-                        </article>
-
-                        <article class="hour-card">
-                            <span>06:00</span>
-                            <strong>🌤️</strong>
-                            <b>25°</b>
-                            <small>30%</small>
-                        </article>
-
-                        <article class="hour-card">
-                            <span>09:00</span>
-                            <strong>☀️</strong>
-                            <b>28°</b>
-                            <small>20%</small>
-                        </article>
-
-                        <article class="hour-card">
-                            <span>12:00</span>
-                            <strong>☀️</strong>
-                            <b>30°</b>
-                            <small>25%</small>
-                        </article>
-
-                    </div>
-
-                </section>
-
-
-                <!-- FORECAST -->
-                <section class="section-block" id="forecast">
-
-                    <div class="section-heading">
-
-                        <div>
-                            <span class="section-label">FORECAST</span>
-                            <h2>Prakiraan 7 Hari</h2>
-                        </div>
-
-                    </div>
-
-
-                    <div class="forecast-list">
-
-                        <article class="forecast-card today">
-                            <div class="forecast-day">
-                                <strong>Hari Ini</strong>
-                                <span>Kamis, 3 Sep</span>
-                            </div>
-
-                            <div class="forecast-condition">
-                                <span>☀️</span>
-                                <strong>Cerah Berawan</strong>
-                            </div>
-
-                            <div class="forecast-rain">
-                                <span>💧</span>
-                                <strong>30%</strong>
-                            </div>
-
-                            <div class="forecast-temp">
-                                <strong>30°</strong>
-                                <span>24°</span>
-                            </div>
-                        </article>
-
-
-                        <article class="forecast-card">
-                            <div class="forecast-day">
-                                <strong>Jumat</strong>
-                                <span>4 September</span>
-                            </div>
-
-                            <div class="forecast-condition">
-                                <span>🌦️</span>
-                                <strong>Hujan Ringan</strong>
-                            </div>
-
-                            <div class="forecast-rain">
-                                <span>💧</span>
-                                <strong>65%</strong>
-                            </div>
-
-                            <div class="forecast-temp">
-                                <strong>29°</strong>
-                                <span>24°</span>
-                            </div>
-                        </article>
-
-
-                        <article class="forecast-card">
-                            <div class="forecast-day">
-                                <strong>Sabtu</strong>
-                                <span>5 September</span>
-                            </div>
-
-                            <div class="forecast-condition">
-                                <span>⛅</span>
-                                <strong>Berawan</strong>
-                            </div>
-
-                            <div class="forecast-rain">
-                                <span>💧</span>
-                                <strong>35%</strong>
-                            </div>
-
-                            <div class="forecast-temp">
-                                <strong>30°</strong>
-                                <span>24°</span>
-                            </div>
-                        </article>
-
-
-                        <article class="forecast-card">
-                            <div class="forecast-day">
-                                <strong>Minggu</strong>
-                                <span>6 September</span>
-                            </div>
-
-                            <div class="forecast-condition">
-                                <span>🌧️</span>
-                                <strong>Hujan</strong>
-                            </div>
-
-                            <div class="forecast-rain">
-                                <span>💧</span>
-                                <strong>75%</strong>
-                            </div>
-
-                            <div class="forecast-temp">
-                                <strong>28°</strong>
-                                <span>23°</span>
-                            </div>
-                        </article>
-
-
-                        <article class="forecast-card">
-                            <div class="forecast-day">
-                                <strong>Senin</strong>
-                                <span>7 September</span>
-                            </div>
-
-                            <div class="forecast-condition">
-                                <span>🌤️</span>
-                                <strong>Cerah Berawan</strong>
-                            </div>
-
-                            <div class="forecast-rain">
-                                <span>💧</span>
-                                <strong>25%</strong>
-                            </div>
-
-                            <div class="forecast-temp">
-                                <strong>31°</strong>
-                                <span>24°</span>
-                            </div>
-                        </article>
-
-
-                        <article class="forecast-card">
-                            <div class="forecast-day">
-                                <strong>Selasa</strong>
-                                <span>8 September</span>
-                            </div>
-
-                            <div class="forecast-condition">
-                                <span>☀️</span>
-                                <strong>Cerah</strong>
-                            </div>
-
-                            <div class="forecast-rain">
-                                <span>💧</span>
-                                <strong>15%</strong>
-                            </div>
-
-                            <div class="forecast-temp">
-                                <strong>31°</strong>
-                                <span>24°</span>
-                            </div>
-                        </article>
-
-
-                        <article class="forecast-card">
-                            <div class="forecast-day">
-                                <strong>Rabu</strong>
-                                <span>9 September</span>
-                            </div>
-
-                            <div class="forecast-condition">
-                                <span>🌦️</span>
-                                <strong>Hujan Ringan</strong>
-                            </div>
-
-                            <div class="forecast-rain">
-                                <span>💧</span>
-                                <strong>55%</strong>
-                            </div>
-
-                            <div class="forecast-temp">
-                                <strong>29°</strong>
-                                <span>24°</span>
-                            </div>
-                        </article>
-
-                    </div>
-
-                </section>
-
-
-                <!-- EXTRA INFORMATION -->
-                <section class="bottom-grid">
-
-                    <article class="info-card sunrise-card">
-
-                        <div class="info-header">
-                            <div>
-                                <span class="section-label">MATAHARI</span>
-                                <h3>Sunrise & Sunset</h3>
-                            </div>
-
-                            <span class="big-icon">🌅</span>
-                        </div>
-
-                        <div class="sun-times">
-
-                            <div>
-                                <span>🌅 Terbit</span>
-                                <strong>05:58</strong>
-                            </div>
-
-                            <div>
-                                <span>🌇 Terbenam</span>
-                                <strong>18:04</strong>
-                            </div>
-
-                        </div>
-
-                    </article>
-
-
-                    <article class="info-card">
-
-                        <div class="info-header">
-                            <div>
-                                <span class="section-label">KONDISI</span>
-                                <h3>Ringkasan Hari Ini</h3>
-                            </div>
-
-                            <span class="big-icon">🌤️</span>
-                        </div>
-
-                        <p class="summary-text">
-                            Kondisi cuaca hari ini diperkirakan cukup cerah
-                            dengan potensi hujan pada sore hingga malam hari.
-                        </p>
-
-                    </article>
-
-                </section>
-
-
-                <footer class="footer">
-                    <div>
-                        <strong>🌦️ CUACAKU</strong>
-                        <span>Prakiraan cuaca untuk Anda</span>
-                    </div>
-
-                    <span>V1.0.0</span>
-                </footer>
-
-            </div>
-
-        </main>
-
-    </div>
-
-
-    <!-- MOBILE BOTTOM NAVIGATION -->
-    <nav class="mobile-nav">
-
-        <a href="#dashboard" class="mobile-nav-item active">
-            <span>⌂</span>
-            <small>Home</small>
-        </a>
-
-        <a href="#hourly" class="mobile-nav-item">
-            <span>◷</span>
-            <small>Per Jam</small>
-        </a>
-
-        <button class="mobile-location" id="mobileLocationButton">
-            <span>⌖</span>
-        </button>
-
-        <a href="#forecast" class="mobile-nav-item">
-            <span>▦</span>
-            <small>Forecast</small>
-        </a>
-
-        <button class="mobile-nav-item" id="mobileRefresh">
-            <span>↻</span>
-            <small>Refresh</small>
-        </button>
-
-    </nav>
-
-
-    <!-- TOAST -->
-    <div class="toast" id="toast">
-        <span>✓</span>
-        <p id="toastMessage">Data berhasil diperbarui</p>
-    </div>
-
-
-    <!-- LEAFLET MAP -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<script src="script.js"></script>
-
+    <script>
+        // Menerjemahkan kode cuaca WMO ke bahasa Indonesia
+        function getWeatherDescription(code) {
+            const weatherCodes = {
+                0: "Cerah",
+                1: "Cerah Berawan",
+                2: "Berawan",
+                3: "Mendung",
+                45: "Berkabut",
+                48: "Kabut Tebal",
+                51: "Gerimis Ringan",
+                53: "Gerimis Sedang",
+                55: "Gerimis Lebat",
+                61: "Hujan Ringan",
+                63: "Hujan Sedang",
+                65: "Hujan Lebat",
+                71: "Salju Ringan", // Hanya untuk antisipasi kode global
+                80: "Hujan Deras Lokal",
+                95: "Badai Petir",
+                96: "Badai Petir & Hujan Es",
+                99: "Badai Petir Hebat"
+            };
+            return weatherCodes[code] || "Tidak diketahui";
+        }
+
+        // Mengambil nama lokasi berdasarkan koordinat
+        async function getLocationName(lat, lon) {
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=id`);
+                const data = await response.json();
+                
+                const address = data.address;
+                // Mengutamakan nama kecamatan, desa, atau distrik
+                const kecamatan = address.village || address.suburb || address.city_district || address.town || "Lokasi Tidak Diketahui";
+                const kota = address.city || address.county || address.state || "";
+                
+                document.getElementById('kecamatan-name').textContent = kecamatan;
+                document.getElementById('city-name').textContent = kota;
+            } catch (error) {
+                console.error("Gagal mengambil nama lokasi", error);
+                document.getElementById('kecamatan-name').textContent = "Koordinat Ditemukan";
+                document.getElementById('city-name').textContent = "Gagal memuat nama daerah";
+            }
+        }
+
+        // Mengambil data cuaca berdasarkan koordinat
+        async function getWeatherData(lat, lon) {
+            try {
+                const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+                const data = await response.json();
+                const current = data.current_weather;
+
+                document.getElementById('temp-value').textContent = Math.round(current.temperature);
+                document.getElementById('wind-speed').textContent = current.windspeed;
+                document.getElementById('wind-dir').textContent = current.winddirection;
+                document.getElementById('weather-desc').textContent = getWeatherDescription(current.weathercode);
+
+                // Sembunyikan loading, tampilkan cuaca
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('weather-content').classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Gagal mengambil data cuaca", error);
+                document.getElementById('loading').innerHTML = "Gagal memuat data cuaca. Silakan muat ulang halaman.";
+            }
+        }
+
+        // Meminta akses lokasi perangkat
+        function initGeolocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        
+                        getLocationName(lat, lon);
+                        getWeatherData(lat, lon);
+                    },
+                    (error) => {
+                        let msg = "Gagal mendapatkan lokasi.";
+                        if(error.code === 1) msg = "Akses lokasi ditolak oleh pengguna.";
+                        document.getElementById('loading').innerHTML = msg + "<br><small>Izinkan akses lokasi di pengaturan browser Anda.</small>";
+                    }
+                );
+            } else {
+                document.getElementById('loading').textContent = "Browser Anda tidak mendukung Geolocation.";
+            }
+        }
+
+        // Jalankan saat halaman dimuat
+        window.onload = initGeolocation;
+    </script>
 </body>
 </html>
