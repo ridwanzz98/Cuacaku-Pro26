@@ -151,7 +151,50 @@
                     </button>
 
                 </section>
+<!-- LOCATION MAP -->
+<section class="map-section">
 
+    <div class="section-heading">
+        <div>
+            <span class="section-label">LOKASI GPS</span>
+            <h2>Posisi Anda di Peta</h2>
+        </div>
+
+        <div class="map-status">
+            <span class="map-status-dot"></span>
+            GPS Aktif
+        </div>
+    </div>
+
+    <div class="map-card">
+
+        <div id="weatherMap"></div>
+
+        <div class="map-overlay">
+
+            <div class="map-location-info">
+                <span class="map-pin">⌖</span>
+
+                <div>
+                    <strong id="mapLocationName">
+                        Mendeteksi lokasi...
+                    </strong>
+
+                    <small id="mapCoordinates">
+                        Latitude — • Longitude —
+                    </small>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- CURRENT WEATHER -->
+<section class="weather-hero" id="dashboard">
 
                 <!-- CURRENT WEATHER -->
                 <section class="weather-hero" id="dashboard">
@@ -629,7 +672,10 @@
     </div>
 
 
-    <script src="script.js"></script>
+    <!-- LEAFLET MAP -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="script.js"></script>
 
 </body>
 </html>
