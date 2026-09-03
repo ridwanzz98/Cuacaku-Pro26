@@ -1,52 +1,48 @@
-```javascript
 /* =========================================================
    CUACAKU V1.0.0
-   TAHAP 2
-   GPS + REVERSE GEOCODING + OPEN-METEO
-   =========================================================
+   TAHAP 3
+   GPS + BIGDATACLOUD + OPEN-METEO
 
-   FUNGSI:
-   - Mengambil lokasi GPS perangkat
-   - Menampilkan latitude & longitude
-   - Mendeteksi nama lokasi
-   - Mendeteksi desa/kelurahan
-   - Mendeteksi kecamatan
-   - Mendeteksi kabupaten
-   - Mendeteksi provinsi
-   - Mengambil data cuaca Open-Meteo
-   - Cuaca berdasarkan koordinat GPS
+   FITUR:
+   - GPS perangkat
+   - Latitude / Longitude
+   - Reverse geocoding
+   - Desa / Kelurahan
+   - Kecamatan
+   - Kabupaten / Kota
+   - Provinsi
+   - Suhu aktual
+   - Feels like
+   - Kelembapan
+   - Angin
+   - Arah angin
+   - Peluang hujan
    - Prakiraan per jam
    - Prakiraan 7 hari
-   - Sunrise / sunset
-   - Refresh data
-   - Responsive UI tetap menggunakan HTML/CSS Tahap 1
-
+   - Sunrise / Sunset
+   - Refresh cuaca
+   - Auto refresh
    ========================================================= */
 
 
 /* =========================================================
-   KONFIGURASI
+   KONFIGURASI API
    ========================================================= */
 
 const CONFIG = {
 
-    // Open-Meteo
     WEATHER_API:
         "https://api.open-meteo.com/v1/forecast",
 
-    // Reverse Geocoding
-    GEOCODING_API:
-        "https://nominatim.openstreetmap.org/reverse",
+    LOCATION_API:
+        "https://api.bigdatacloud.net/data/reverse-geocode-client",
 
-    // Bahasa Indonesia
     LANGUAGE:
         "id",
 
-    // Jumlah hari prakiraan
     FORECAST_DAYS:
         7,
 
-    // Akurasi GPS
     GPS_OPTIONS: {
         enableHighAccuracy: true,
         timeout: 20000,
@@ -57,7 +53,20 @@ const CONFIG = {
 
 
 /* =========================================================
-   ELEMENT DOM
+   STATE
+   ========================================================= */
+
+let currentCoordinates = null;
+
+let currentWeatherData = null;
+
+let currentLocationData = null;
+
+let toastTimer = null;
+
+
+/* =========================================================
+   DOM
    ========================================================= */
 
 const refreshButton =
@@ -110,20 +119,7 @@ const currentDate =
 
 
 /* =========================================================
-   STATE APLIKASI
-   ========================================================= */
-
-let currentCoordinates = null;
-
-let currentWeatherData = null;
-
-let currentLocationData = null;
-
-let toastTimer = null;
-
-
-/* =========================================================
-   INISIALISASI
+   START
    ========================================================= */
 
 document.addEventListener(
@@ -138,16 +134,8 @@ document.addEventListener(
 
         setupHourlyScroll();
 
-        /*
-         * Jangan langsung meminta GPS ketika halaman dibuka.
-         *
-         * Browser membutuhkan izin pengguna.
-         * GPS akan dijalankan ketika tombol
-         * "Gunakan Lokasi Saya" ditekan.
-         */
-
-        showToast(
-            "Tekan \"Gunakan Lokasi Saya\" untuk memulai."
+        console.log(
+            "CUACAKU V1.0.0 Tahap 3 aktif."
         );
 
     }
@@ -155,7 +143,7 @@ document.addEventListener(
 
 
 /* =========================================================
-   EVENT
+   INTERACTION
    ========================================================= */
 
 function setupInteractions() {
@@ -164,22 +152,7 @@ function setupInteractions() {
 
         refreshButton.addEventListener(
             "click",
-            () => {
-
-                if (currentCoordinates) {
-
-                    loadWeatherForLocation(
-                        currentCoordinates.latitude,
-                        currentCoordinates.longitude
-                    );
-
-                } else {
-
-                    requestLocation();
-
-                }
-
-            }
+            refreshWeather
         );
 
     }
@@ -189,22 +162,7 @@ function setupInteractions() {
 
         mobileRefresh.addEventListener(
             "click",
-            () => {
-
-                if (currentCoordinates) {
-
-                    loadWeatherForLocation(
-                        currentCoordinates.latitude,
-                        currentCoordinates.longitude
-                    );
-
-                } else {
-
-                    requestLocation();
-
-                }
-
-            }
+            refreshWeather
         );
 
     }
@@ -249,7 +207,33 @@ function setupInteractions() {
 
 
 /* =========================================================
-   GPS
+   REFRESH
+   ========================================================= */
+
+function refreshWeather() {
+
+    if (!currentCoordinates) {
+
+        requestLocation();
+
+        return;
+
+    }
+
+
+    loadWeatherForLocation(
+
+        currentCoordinates.latitude,
+
+        currentCoordinates.longitude
+
+    );
+
+}
+
+
+/* =========================================================
+   REQUEST GPS
    ========================================================= */
 
 function requestLocation() {
@@ -277,45 +261,36 @@ function requestLocation() {
 
         async (position) => {
 
+            const latitude =
+                position.coords.latitude;
+
+            const longitude =
+                position.coords.longitude;
+
+            const accuracy =
+                position.coords.accuracy;
+
+
+            currentCoordinates = {
+
+                latitude,
+                longitude,
+                accuracy
+
+            };
+
+
+            updateCoordinates(
+                latitude,
+                longitude,
+                accuracy
+            );
+
+
             try {
 
-                const latitude =
-                    position.coords.latitude;
-
-                const longitude =
-                    position.coords.longitude;
-
-
-                const accuracy =
-                    position.coords.accuracy;
-
-
-                currentCoordinates = {
-
-                    latitude,
-                    longitude,
-                    accuracy
-
-                };
-
-
-                updateCoordinates(
-                    latitude,
-                    longitude,
-                    accuracy
-                );
-
-
-                showToast(
-                    "Lokasi ditemukan. Mengambil data..."
-                );
-
-
                 /*
-                 * Dua proses dilakukan setelah GPS:
-                 *
-                 * 1. Reverse geocoding
-                 * 2. Weather API
+                 * Jalankan reverse geocoding
                  */
 
                 await loadLocationName(
@@ -324,6 +299,10 @@ function requestLocation() {
                 );
 
 
+                /*
+                 * Kemudian ambil cuaca
+                 */
+
                 await loadWeatherForLocation(
                     latitude,
                     longitude,
@@ -331,22 +310,28 @@ function requestLocation() {
                 );
 
 
-                setLocationLoading(false);
+                setLocationLoading(
+                    false
+                );
+
+
+                showToast(
+                    "Lokasi dan cuaca berhasil diperbarui."
+                );
 
 
             } catch (error) {
 
-                console.error(
-                    "Location processing error:",
-                    error
+                console.error(error);
+
+
+                setLocationLoading(
+                    false
                 );
 
 
-                setLocationLoading(false);
-
-
                 showToast(
-                    "Lokasi ditemukan, tetapi data gagal dimuat."
+                    "GPS aktif, tetapi sebagian data gagal dimuat."
                 );
 
             }
@@ -380,36 +365,35 @@ function handleGPSError(error) {
         "Lokasi tidak dapat ditemukan.";
 
 
-    switch (error.code) {
+    if (
+        error &&
+        error.code === 1
+    ) {
 
-        case error.PERMISSION_DENIED:
+        message =
+            "Izin lokasi ditolak. Izinkan lokasi di browser.";
 
-            message =
-                "Izin lokasi ditolak. Izinkan akses lokasi di browser.";
-
-            break;
-
-
-        case error.POSITION_UNAVAILABLE:
-
-            message =
-                "Lokasi perangkat tidak tersedia.";
-
-            break;
+    }
 
 
-        case error.TIMEOUT:
+    if (
+        error &&
+        error.code === 2
+    ) {
 
-            message =
-                "Pencarian lokasi terlalu lama. Coba lagi.";
+        message =
+            "Lokasi perangkat tidak tersedia.";
 
-            break;
+    }
 
 
-        default:
+    if (
+        error &&
+        error.code === 3
+    ) {
 
-            message =
-                "Terjadi kesalahan saat mengambil lokasi.";
+        message =
+            "GPS terlalu lama merespons. Silakan coba lagi.";
 
     }
 
@@ -428,18 +412,21 @@ function handleGPSError(error) {
 
 
 /* =========================================================
-   STATUS TOMBOL LOKASI
+   LOADING LOCATION
    ========================================================= */
 
-function setLocationLoading(isLoading) {
+function setLocationLoading(
+    loading
+) {
 
     if (locationButton) {
 
         locationButton.disabled =
-            isLoading;
+            loading;
+
 
         locationButton.innerHTML =
-            isLoading
+            loading
                 ? "<span>⌛</span> Mencari Lokasi..."
                 : "<span>⌖</span> Gunakan Lokasi Saya";
 
@@ -449,10 +436,11 @@ function setLocationLoading(isLoading) {
     if (mobileLocationButton) {
 
         mobileLocationButton.disabled =
-            isLoading;
+            loading;
+
 
         mobileLocationButton.innerHTML =
-            isLoading
+            loading
                 ? "<span>⌛</span>"
                 : "<span>⌖</span>";
 
@@ -462,7 +450,7 @@ function setLocationLoading(isLoading) {
 
 
 /* =========================================================
-   UPDATE KOORDINAT
+   COORDINATES
    ========================================================= */
 
 function updateCoordinates(
@@ -491,30 +479,13 @@ function updateCoordinates(
 
 
     coordinates.textContent =
-        `Latitude ${latitude.toFixed(5)} • Longitude ${longitude.toFixed(5)}${accuracyText}`;
+        `Latitude ${latitude.toFixed(6)} • Longitude ${longitude.toFixed(6)}${accuracyText}`;
 
 }
 
 
 /* =========================================================
-   REVERSE GEOCODING
-   =========================================================
-
-   GPS:
-   latitude + longitude
-
-   ↓
-
-   Nominatim
-
-   ↓
-
-   Desa
-   Kecamatan
-   Kabupaten
-   Provinsi
-   Negara
-
+   BIGDATACLOUD REVERSE GEOCODING
    ========================================================= */
 
 async function loadLocationName(
@@ -525,7 +496,7 @@ async function loadLocationName(
     if (topLocation) {
 
         topLocation.textContent =
-            "Mencari nama lokasi...";
+            "Mendeteksi nama wilayah...";
 
     }
 
@@ -533,45 +504,32 @@ async function loadLocationName(
     const params =
         new URLSearchParams({
 
-            format: "jsonv2",
+            latitude:
+                latitude,
 
-            lat: latitude,
+            longitude:
+                longitude,
 
-            lon: longitude,
-
-            zoom: "18",
-
-            addressdetails: "1",
-
-            "accept-language":
-                "id"
+            localityLanguage:
+                CONFIG.LANGUAGE
 
         });
 
 
     const url =
-        `${CONFIG.GEOCODING_API}?${params.toString()}`;
+        `${CONFIG.LOCATION_API}?${params.toString()}`;
 
 
     try {
 
         const response =
-            await fetch(
-                url,
-                {
-                    method: "GET",
-                    headers: {
-                        "Accept":
-                            "application/json"
-                    }
-                }
-            );
+            await fetch(url);
 
 
         if (!response.ok) {
 
             throw new Error(
-                `Geocoding HTTP ${response.status}`
+                `Location API error: ${response.status}`
             );
 
         }
@@ -582,10 +540,18 @@ async function loadLocationName(
 
 
         currentLocationData =
-            parseLocationData(data);
+            parseBigDataCloudLocation(
+                data
+            );
 
 
         updateLocationUI(
+            currentLocationData
+        );
+
+
+        console.log(
+            "Location data:",
             currentLocationData
         );
 
@@ -602,14 +568,13 @@ async function loadLocationName(
 
 
         /*
-         * GPS tetap bisa digunakan meskipun
-         * reverse geocoding gagal.
+         * GPS tetap dianggap aktif.
          */
 
         if (topLocation) {
 
             topLocation.textContent =
-                "Lokasi GPS ditemukan";
+                "Lokasi GPS aktif";
 
         }
 
@@ -617,7 +582,7 @@ async function loadLocationName(
         if (locationName) {
 
             locationName.textContent =
-                "Lokasi GPS";
+                "Lokasi Anda";
 
         }
 
@@ -631,7 +596,7 @@ async function loadLocationName(
 
 
         showToast(
-            "GPS aktif, tetapi nama wilayah belum ditemukan."
+            "GPS aktif, tetapi nama wilayah gagal ditemukan."
         );
 
 
@@ -643,106 +608,197 @@ async function loadLocationName(
 
 
 /* =========================================================
-   PARSE DATA LOKASI
+   PARSE BIGDATACLOUD
    ========================================================= */
 
-function parseLocationData(data) {
+function parseBigDataCloudLocation(
+    data
+) {
 
-    const address =
-        data?.address || {};
+    const localityInfo =
+        data?.localityInfo;
+
+
+    const administrative =
+        localityInfo?.administrative || [];
 
 
     /*
-     * OSM tidak selalu menggunakan nama field
-     * yang sama untuk setiap wilayah.
-     *
-     * Karena itu kita sediakan beberapa fallback.
+     * Cari nama administratif berdasarkan level.
      */
 
+    let district = "";
 
-    const village =
-        firstValid([
+    let regency = "";
 
-            address.village,
-
-            address.town,
-
-            address.suburb,
-
-            address.municipality,
-
-            address.hamlet,
-
-            address.city_district
-
-        ]);
+    let province = "";
 
 
-    const district =
-        firstValid([
+    administrative.forEach(
+        item => {
 
-            address.county,
+            const name =
+                item?.name || "";
 
-            address.city_district,
-
-            address.municipality
-
-        ]);
-
-
-    const city =
-        firstValid([
-
-            address.city,
-
-            address.town,
-
-            address.municipality,
-
-            address.county
-
-        ]);
+            const description =
+                (
+                    item?.description ||
+                    ""
+                ).toLowerCase();
 
 
-    const province =
-        firstValid([
+            /*
+             * Kecamatan
+             */
 
-            address.state,
+            if (
+                !district &&
+                (
+                    description.includes(
+                        "district"
+                    ) ||
+                    description.includes(
+                        "kecamatan"
+                    )
+                )
+            ) {
 
-            address.province,
+                district =
+                    name;
 
-            address.state_district
-
-        ]);
+            }
 
 
-    const country =
-        firstValid([
+            /*
+             * Kabupaten / Regency
+             */
 
-            address.country
+            if (
+                !regency &&
+                (
+                    description.includes(
+                        "regency"
+                    ) ||
+                    description.includes(
+                        "kabupaten"
+                    ) ||
+                    description.includes(
+                        "municipality"
+                    )
+                )
+            ) {
 
-        ]);
+                regency =
+                    name;
+
+            }
+
+
+            /*
+             * Provinsi
+             */
+
+            if (
+                !province &&
+                (
+                    description.includes(
+                        "province"
+                    ) ||
+                    description.includes(
+                        "provinsi"
+                    ) ||
+                    description.includes(
+                        "state"
+                    )
+                )
+            ) {
+
+                province =
+                    name;
+
+            }
+
+        }
+    );
+
+
+    /*
+     * Fallback.
+     */
+
+    if (!province) {
+
+        province =
+            data?.principalSubdivision ||
+            "";
+
+    }
+
+
+    if (!regency) {
+
+        regency =
+            data?.city ||
+            "";
+
+    }
+
+
+    /*
+     * Locality dapat berupa desa,
+     * kelurahan, suburb atau area lokal.
+     */
+
+    const locality =
+        data?.locality ||
+        data?.localityName ||
+        "";
 
 
     return {
 
-        village:
-            cleanPlaceName(village),
+        locality:
+            cleanLocationName(
+                locality
+            ),
 
         district:
-            cleanPlaceName(district),
+            cleanLocationName(
+                district
+            ),
 
-        city:
-            cleanPlaceName(city),
+        regency:
+            cleanLocationName(
+                regency
+            ),
 
         province:
-            cleanPlaceName(province),
+            cleanLocationName(
+                province
+            ),
+
+        city:
+            cleanLocationName(
+                data?.city
+            ),
 
         country:
-            cleanPlaceName(country),
+            cleanLocationName(
+                data?.countryName
+            ),
 
-        displayName:
-            data?.display_name || ""
+        postcode:
+            data?.postcode || "",
+
+        latitude:
+            data?.latitude,
+
+        longitude:
+            data?.longitude,
+
+        lookupSource:
+            data?.lookupSource ||
+            "coordinates"
 
     };
 
@@ -750,46 +806,42 @@ function parseLocationData(data) {
 
 
 /* =========================================================
-   FALLBACK VALUE
+   CLEAN LOCATION
    ========================================================= */
 
-function firstValid(values) {
+function cleanLocationName(
+    value
+) {
 
-    for (
-        const value of values
+    if (
+        !value ||
+        String(value).trim() === ""
     ) {
 
-        if (
-            value &&
-            String(value).trim() !== ""
-        ) {
-
-            return String(value).trim();
-
-        }
+        return "";
 
     }
 
 
-    return "Tidak tersedia";
-
-}
-
-
-/* =========================================================
-   MEMBERSIHKAN NAMA LOKASI
-   ========================================================= */
-
-function cleanPlaceName(name) {
-
-    if (!name) {
-        return "Tidak tersedia";
-    }
-
-
-    return String(name)
+    return String(value)
         .replace(
-            /^(Kecamatan|Kec\.|Kabupaten|Kab\.|Kota|Provinsi)\s+/i,
+            /^Kecamatan\s+/i,
+            ""
+        )
+        .replace(
+            /^Kec\.\s+/i,
+            ""
+        )
+        .replace(
+            /^Kabupaten\s+/i,
+            ""
+        )
+        .replace(
+            /^Kab\.\s+/i,
+            ""
+        )
+        .replace(
+            /^Provinsi\s+/i,
             ""
         )
         .trim();
@@ -798,64 +850,55 @@ function cleanPlaceName(name) {
 
 
 /* =========================================================
-   UPDATE UI LOKASI
+   UPDATE LOCATION UI
    ========================================================= */
 
-function updateLocationUI(location) {
+function updateLocationUI(
+    location
+) {
 
     if (!location) {
         return;
     }
 
 
-    const village =
-        location.village;
+    const locality =
+        location.locality ||
+        "";
 
 
     const district =
-        location.district;
+        location.district ||
+        "";
 
 
-    const city =
-        location.city;
+    const regency =
+        location.regency ||
+        "";
 
 
     const province =
-        location.province;
+        location.province ||
+        "";
 
 
     /*
-     * Nama utama.
+     * Nama utama
      */
 
     if (locationName) {
 
-        if (
-            village !== "Tidak tersedia"
-        ) {
-
-            locationName.textContent =
-                village;
-
-        } else if (
-            district !== "Tidak tersedia"
-        ) {
-
-            locationName.textContent =
-                district;
-
-        } else {
-
-            locationName.textContent =
-                "Lokasi Anda";
-
-        }
+        locationName.textContent =
+            locality ||
+            district ||
+            regency ||
+            "Lokasi Anda";
 
     }
 
 
     /*
-     * Baris alamat.
+     * Alamat administratif
      */
 
     if (locationAddress) {
@@ -863,9 +906,7 @@ function updateLocationUI(location) {
         const parts = [];
 
 
-        if (
-            district !== "Tidak tersedia"
-        ) {
+        if (district) {
 
             parts.push(
                 `Kec. ${district}`
@@ -874,20 +915,32 @@ function updateLocationUI(location) {
         }
 
 
-        if (
-            city !== "Tidak tersedia"
-        ) {
+        if (regency) {
 
-            parts.push(city);
+            parts.push(
+                regency
+            );
+
+        }
+
+
+        if (province) {
+
+            parts.push(
+                province
+            );
 
         }
 
 
         if (
-            province !== "Tidak tersedia"
+            parts.length === 0 &&
+            location.country
         ) {
 
-            parts.push(province);
+            parts.push(
+                location.country
+            );
 
         }
 
@@ -899,29 +952,25 @@ function updateLocationUI(location) {
 
 
     /*
-     * Header.
+     * Header lokasi
      */
 
     if (topLocation) {
 
-        if (
-            district !== "Tidak tersedia"
-        ) {
+        if (district) {
 
             topLocation.textContent =
                 `Kec. ${district}`;
 
-        } else if (
-            village !== "Tidak tersedia"
-        ) {
+        } else if (locality) {
 
             topLocation.textContent =
-                village;
+                locality;
 
         } else {
 
             topLocation.textContent =
-                "Lokasi Anda";
+                "Lokasi GPS aktif";
 
         }
 
@@ -931,7 +980,7 @@ function updateLocationUI(location) {
 
 
 /* =========================================================
-   OPEN-METEO
+   OPEN-METEO WEATHER
    ========================================================= */
 
 async function loadWeatherForLocation(
@@ -943,7 +992,7 @@ async function loadWeatherForLocation(
     if (showLoading) {
 
         showToast(
-            "Mengambil data cuaca terbaru..."
+            "Mengambil data cuaca..."
         );
 
     }
@@ -978,8 +1027,8 @@ async function loadWeatherForLocation(
                 current:
                     [
                         "temperature_2m",
-                        "apparent_temperature",
                         "relative_humidity_2m",
+                        "apparent_temperature",
                         "precipitation",
                         "rain",
                         "weather_code",
@@ -1024,18 +1073,16 @@ async function loadWeatherForLocation(
             });
 
 
-        const url =
-            `${CONFIG.WEATHER_API}?${params.toString()}`;
-
-
         const response =
-            await fetch(url);
+            await fetch(
+                `${CONFIG.WEATHER_API}?${params.toString()}`
+            );
 
 
         if (!response.ok) {
 
             throw new Error(
-                `Weather HTTP ${response.status}`
+                `Weather API error: ${response.status}`
             );
 
         }
@@ -1049,23 +1096,32 @@ async function loadWeatherForLocation(
             data;
 
 
-        updateCurrentWeather(data);
+        updateCurrentWeather(
+            data
+        );
 
-        updateHourlyForecast(data);
 
-        updateDailyForecast(data);
+        updateHourlyForecast(
+            data
+        );
 
-        updateSunriseSunset(data);
 
-        updateSummary(data);
+        updateDailyForecast(
+            data
+        );
+
+
+        updateSunriseSunset(
+            data
+        );
+
+
+        updateSummary(
+            data
+        );
 
 
         updateDataStatus();
-
-
-        showToast(
-            "Data cuaca berhasil diperbarui."
-        );
 
 
         return data;
@@ -1074,13 +1130,13 @@ async function loadWeatherForLocation(
     } catch (error) {
 
         console.error(
-            "Weather API error:",
+            "Weather error:",
             error
         );
 
 
         showToast(
-            "Gagal mengambil data cuaca."
+            "Data cuaca gagal dimuat."
         );
 
 
@@ -1092,10 +1148,12 @@ async function loadWeatherForLocation(
 
 
 /* =========================================================
-   CUACA SEKARANG
+   CURRENT WEATHER
    ========================================================= */
 
-function updateCurrentWeather(data) {
+function updateCurrentWeather(
+    data
+) {
 
     const current =
         data?.current;
@@ -1107,7 +1165,7 @@ function updateCurrentWeather(data) {
 
 
     /*
-     * Suhu
+     * SUHU
      */
 
     if (currentTemp) {
@@ -1121,7 +1179,7 @@ function updateCurrentWeather(data) {
 
 
     /*
-     * Feels like
+     * FEELS LIKE
      */
 
     if (feelsLike) {
@@ -1133,7 +1191,7 @@ function updateCurrentWeather(data) {
 
 
     /*
-     * Weather code
+     * KONDISI
      */
 
     const weather =
@@ -1159,11 +1217,7 @@ function updateCurrentWeather(data) {
 
 
     /*
-     * Statistik kartu.
-     *
-     * HTML Tahap 1 belum mempunyai ID khusus
-     * untuk kartu statistik, jadi kita cari berdasarkan
-     * urutannya.
+     * STAT CARDS
      */
 
     const statCards =
@@ -1179,9 +1233,13 @@ function updateCurrentWeather(data) {
          */
 
         updateStatCard(
+
             statCards[0],
+
             `${roundValue(current.temperature_2m)}°C`,
+
             "Suhu udara saat ini"
+
         );
 
 
@@ -1190,9 +1248,13 @@ function updateCurrentWeather(data) {
          */
 
         updateStatCard(
+
             statCards[1],
+
             `${roundValue(current.relative_humidity_2m)}%`,
+
             "Kelembapan udara"
+
         );
 
 
@@ -1200,39 +1262,47 @@ function updateCurrentWeather(data) {
          * ANGIN
          */
 
-        const windDirection =
+        const direction =
             degreesToCompass(
                 current.wind_direction_10m
             );
 
 
         updateStatCard(
+
             statCards[2],
+
             `${roundValue(current.wind_speed_10m)} km/j`,
-            `Arah ${windDirection}`
+
+            `Arah ${direction}`
+
         );
 
 
         /*
-         * HUJAN
+         * PELUANG HUJAN
          */
 
-        const hourly =
-            data.hourly;
-
-
-        const probability =
+        const rainProbability =
             getNearestHourlyValue(
-                hourly,
+
+                data.hourly,
+
                 "precipitation_probability",
+
                 current.time
+
             );
 
 
         updateStatCard(
+
             statCards[3],
-            `${roundValue(probability)}%`,
+
+            `${roundValue(rainProbability)}%`,
+
             "Peluang hujan"
+
         );
 
     }
@@ -1241,7 +1311,7 @@ function updateCurrentWeather(data) {
 
 
 /* =========================================================
-   UPDATE STAT CARD
+   STAT CARD
    ========================================================= */
 
 function updateStatCard(
@@ -1261,7 +1331,7 @@ function updateStatCard(
         );
 
 
-    const descriptionElement =
+    const textElement =
         card.querySelector(
             "p"
         );
@@ -1269,37 +1339,29 @@ function updateStatCard(
 
     if (valueElement) {
 
-        const match =
-            String(value).match(
-                /^(.+?)(°C|%| km\/j)?$/
+        valueElement.innerHTML =
+            escapeHTML(
+                String(value)
+            )
+            .replace(
+                /°C/g,
+                "<span>°C</span>"
+            )
+            .replace(
+                /%/g,
+                "<span>%</span>"
+            )
+            .replace(
+                / km\/j/g,
+                "<span> km/j</span>"
             );
-
-
-        if (match) {
-
-            const main =
-                match[1];
-
-            const unit =
-                match[2] || "";
-
-
-            valueElement.innerHTML =
-                `${main}<span>${unit}</span>`;
-
-        } else {
-
-            valueElement.textContent =
-                value;
-
-        }
 
     }
 
 
-    if (descriptionElement) {
+    if (textElement) {
 
-        descriptionElement.textContent =
+        textElement.textContent =
             description;
 
     }
@@ -1308,10 +1370,12 @@ function updateStatCard(
 
 
 /* =========================================================
-   PRAKIRAAN PER JAM
+   HOURLY
    ========================================================= */
 
-function updateHourlyForecast(data) {
+function updateHourlyForecast(
+    data
+) {
 
     const hourly =
         data?.hourly;
@@ -1333,54 +1397,48 @@ function updateHourlyForecast(data) {
     }
 
 
-    /*
-     * Kita ambil 8 waktu mulai dari waktu terdekat
-     * dengan sekarang.
-     */
-
-    const currentIndex =
-        findNearestTimeIndex(
-            hourly.time,
-            data.current?.time
-        );
-
-
     const startIndex =
-        Math.max(
-            currentIndex,
-            0
+        findNearestTimeIndex(
+
+            hourly.time,
+
+            data.current?.time
+
         );
 
 
-    const cards = [];
+    let html = "";
 
 
     for (
         let i = startIndex;
         i < hourly.time.length &&
-        cards.length < 8;
+        i < startIndex + 8;
         i++
     ) {
 
-        cards.push(
+        html +=
             createHourlyCard(
+
                 hourly,
+
                 i,
+
                 i === startIndex
-            )
-        );
+
+            );
 
     }
 
 
     container.innerHTML =
-        cards.join("");
+        html;
 
 }
 
 
 /* =========================================================
-   CREATE HOURLY CARD
+   HOURLY CARD
    ========================================================= */
 
 function createHourlyCard(
@@ -1394,48 +1452,38 @@ function createHourlyCard(
 
 
     const temperature =
-        hourly.temperature_2m[index];
+        hourly.temperature_2m?.[index];
 
 
-    const precipitationProbability =
+    const probability =
         hourly.precipitation_probability?.[index];
-
-
-    const weatherCode =
-        hourly.weather_code?.[index];
 
 
     const weather =
         getWeatherInfo(
-            weatherCode
+            hourly.weather_code?.[index]
         );
-
-
-    const timeText =
-        formatHour(time);
-
-
-    const temperatureText =
-        `${roundValue(temperature)}°`;
-
-
-    const rainText =
-        precipitationProbability == null
-            ? "—"
-            : `${roundValue(precipitationProbability)}%`;
 
 
     return `
 
         <article class="hour-card ${active ? "active" : ""}">
 
-            <span>${timeText}</span>
+            <span>
+                ${active ? "Sekarang" : formatHour(time)}
+            </span>
 
-            <strong>${weather.icon}</strong>
+            <strong>
+                ${weather.icon}
+            </strong>
 
-            <b>${temperatureText}</b>
+            <b>
+                ${roundValue(temperature)}°
+            </b>
 
-            <small>${rainText}</small>
+            <small>
+                ${roundValue(probability)}%
+            </small>
 
         </article>
 
@@ -1445,10 +1493,12 @@ function createHourlyCard(
 
 
 /* =========================================================
-   PRAKIRAAN 7 HARI
+   DAILY FORECAST
    ========================================================= */
 
-function updateDailyForecast(data) {
+function updateDailyForecast(
+    data
+) {
 
     const daily =
         data?.daily;
@@ -1470,7 +1520,7 @@ function updateDailyForecast(data) {
     }
 
 
-    const cards = [];
+    let html = "";
 
 
     for (
@@ -1479,24 +1529,26 @@ function updateDailyForecast(data) {
         i++
     ) {
 
-        cards.push(
+        html +=
             createDailyCard(
+
                 daily,
+
                 i
-            )
-        );
+
+            );
 
     }
 
 
     container.innerHTML =
-        cards.join("");
+        html;
 
 }
 
 
 /* =========================================================
-   CREATE DAILY CARD
+   DAILY CARD
    ========================================================= */
 
 function createDailyCard(
@@ -1504,49 +1556,26 @@ function createDailyCard(
     index
 ) {
 
-    const date =
-        daily.time[index];
-
-
-    const weatherCode =
-        daily.weather_code[index];
-
-
     const weather =
         getWeatherInfo(
-            weatherCode
+            daily.weather_code?.[index]
         );
 
 
     const max =
-        daily.temperature_2m_max[index];
+        daily.temperature_2m_max?.[index];
 
 
     const min =
-        daily.temperature_2m_min[index];
+        daily.temperature_2m_min?.[index];
 
 
-    const rainProbability =
+    const rain =
         daily.precipitation_probability_max?.[index];
 
 
-    const dayName =
-        getDayName(
-            date,
-            index
-        );
-
-
-    const dateText =
-        formatDateShort(
-            date
-        );
-
-
-    const rainText =
-        rainProbability == null
-            ? "—"
-            : `${roundValue(rainProbability)}%`;
+    const date =
+        daily.time[index];
 
 
     return `
@@ -1555,36 +1584,54 @@ function createDailyCard(
 
             <div class="forecast-day">
 
-                <strong>${dayName}</strong>
+                <strong>
+                    ${index === 0
+                        ? "Hari Ini"
+                        : getDayName(date)}
+                </strong>
 
-                <span>${dateText}</span>
+                <span>
+                    ${formatDateShort(date)}
+                </span>
 
             </div>
 
 
             <div class="forecast-condition">
 
-                <span>${weather.icon}</span>
+                <span>
+                    ${weather.icon}
+                </span>
 
-                <strong>${weather.description}</strong>
+                <strong>
+                    ${weather.description}
+                </strong>
 
             </div>
 
 
             <div class="forecast-rain">
 
-                <span>💧</span>
+                <span>
+                    💧
+                </span>
 
-                <strong>${rainText}</strong>
+                <strong>
+                    ${roundValue(rain)}%
+                </strong>
 
             </div>
 
 
             <div class="forecast-temp">
 
-                <strong>${roundValue(max)}°</strong>
+                <strong>
+                    ${roundValue(max)}°
+                </strong>
 
-                <span>${roundValue(min)}°</span>
+                <span>
+                    ${roundValue(min)}°
+                </span>
 
             </div>
 
@@ -1599,7 +1646,9 @@ function createDailyCard(
    SUNRISE / SUNSET
    ========================================================= */
 
-function updateSunriseSunset(data) {
+function updateSunriseSunset(
+    data
+) {
 
     const daily =
         data?.daily;
@@ -1627,21 +1676,18 @@ function updateSunriseSunset(data) {
         );
 
 
-    const sunriseElements =
+    const elements =
         document.querySelectorAll(
             ".sun-times strong"
         );
 
 
-    if (
-        sunriseElements.length >= 2
-    ) {
+    if (elements.length >= 2) {
 
-        sunriseElements[0].textContent =
+        elements[0].textContent =
             sunrise;
 
-
-        sunriseElements[1].textContent =
+        elements[1].textContent =
             sunset;
 
     }
@@ -1650,10 +1696,12 @@ function updateSunriseSunset(data) {
 
 
 /* =========================================================
-   RINGKASAN CUACA
+   SUMMARY
    ========================================================= */
 
-function updateSummary(data) {
+function updateSummary(
+    data
+) {
 
     const daily =
         data?.daily;
@@ -1688,34 +1736,32 @@ function updateSummary(data) {
         );
 
 
-    const summaryElement =
+    const summary =
         document.querySelector(
             ".summary-text"
         );
 
 
-    if (!summaryElement) {
+    if (!summary) {
         return;
     }
 
 
-    summaryElement.textContent =
-        `Hari ini diperkirakan ${weather.description.toLowerCase()} dengan suhu sekitar ${min}°C hingga ${max}°C dan peluang hujan maksimum sekitar ${rain}%.`;
+    summary.textContent =
+        `Hari ini diperkirakan ${weather.description.toLowerCase()} dengan suhu ${min}°C hingga ${max}°C. Peluang hujan maksimum sekitar ${rain}%.`;
 
 }
 
 
 /* =========================================================
    WEATHER CODE
-   =========================================================
-
-   WMO WEATHER INTERPRETATION
-
    ========================================================= */
 
-function getWeatherInfo(code) {
+function getWeatherInfo(
+    code
+) {
 
-    const weatherMap = {
+    const map = {
 
         0: {
             description: "Cerah",
@@ -1763,7 +1809,7 @@ function getWeatherInfo(code) {
         },
 
         56: {
-            description: "Gerimis Beku Ringan",
+            description: "Gerimis Beku",
             icon: "🌧️"
         },
 
@@ -1788,7 +1834,7 @@ function getWeatherInfo(code) {
         },
 
         66: {
-            description: "Hujan Beku Ringan",
+            description: "Hujan Beku",
             icon: "🌧️"
         },
 
@@ -1861,7 +1907,7 @@ function getWeatherInfo(code) {
 
 
     return (
-        weatherMap[code] || {
+        map[code] || {
 
             description:
                 "Kondisi Tidak Diketahui",
@@ -1876,7 +1922,7 @@ function getWeatherInfo(code) {
 
 
 /* =========================================================
-   ARAH ANGIN
+   WIND DIRECTION
    ========================================================= */
 
 function degreesToCompass(
@@ -1885,8 +1931,7 @@ function degreesToCompass(
 
     if (
         degrees === null ||
-        degrees === undefined ||
-        Number.isNaN(Number(degrees))
+        degrees === undefined
     ) {
 
         return "—";
@@ -1920,7 +1965,7 @@ function degreesToCompass(
 
 
 /* =========================================================
-   MENCARI INDEX WAKTU TERDEKAT
+   FIND TIME INDEX
    ========================================================= */
 
 function findNearestTimeIndex(
@@ -1939,7 +1984,9 @@ function findNearestTimeIndex(
 
 
     const target =
-        new Date(targetTime).getTime();
+        new Date(
+            targetTime
+        ).getTime();
 
 
     let nearestIndex = 0;
@@ -1951,13 +1998,15 @@ function findNearestTimeIndex(
     times.forEach(
         (time, index) => {
 
-            const current =
-                new Date(time).getTime();
+            const value =
+                new Date(
+                    time
+                ).getTime();
 
 
             const difference =
                 Math.abs(
-                    current - target
+                    value - target
                 );
 
 
@@ -1984,7 +2033,7 @@ function findNearestTimeIndex(
 
 
 /* =========================================================
-   NILAI HOURLY TERDEKAT
+   NEAREST HOURLY VALUE
    ========================================================= */
 
 function getNearestHourlyValue(
@@ -2006,8 +2055,11 @@ function getNearestHourlyValue(
 
     const index =
         findNearestTimeIndex(
+
             hourly.time,
+
             targetTime
+
         );
 
 
@@ -2019,28 +2071,26 @@ function getNearestHourlyValue(
 
 
 /* =========================================================
-   FORMAT JAM
+   FORMAT HOUR
    ========================================================= */
 
 function formatHour(
-    isoTime
+    value
 ) {
 
-    if (!isoTime) {
+    if (!value) {
         return "--:--";
     }
 
 
     const match =
-        String(isoTime).match(
+        String(value).match(
             /T(\d{2}):(\d{2})/
         );
 
 
     if (!match) {
-
         return "--:--";
-
     }
 
 
@@ -2050,36 +2100,34 @@ function formatHour(
 
 
 /* =========================================================
-   FORMAT WAKTU
+   FORMAT TIME
    ========================================================= */
 
 function formatTime(
-    isoTime
+    value
 ) {
 
-    return formatHour(
-        isoTime
-    );
+    return formatHour(value);
 
 }
 
 
 /* =========================================================
-   FORMAT TANGGAL
+   FORMAT DATE
    ========================================================= */
 
 function formatDateShort(
-    dateString
+    value
 ) {
 
-    if (!dateString) {
+    if (!value) {
         return "—";
     }
 
 
     const date =
         new Date(
-            `${dateString}T12:00:00`
+            `${value}T12:00:00`
         );
 
 
@@ -2095,22 +2143,21 @@ function formatDateShort(
 
 
 /* =========================================================
-   NAMA HARI
+   DAY NAME
    ========================================================= */
 
 function getDayName(
-    dateString,
-    index
+    value
 ) {
 
-    if (index === 0) {
-        return "Hari Ini";
+    if (!value) {
+        return "—";
     }
 
 
     const date =
         new Date(
-            `${dateString}T12:00:00`
+            `${value}T12:00:00`
         );
 
 
@@ -2125,7 +2172,7 @@ function getDayName(
 
 
 /* =========================================================
-   BULATKAN NILAI
+   ROUND VALUE
    ========================================================= */
 
 function roundValue(
@@ -2135,7 +2182,9 @@ function roundValue(
     if (
         value === null ||
         value === undefined ||
-        Number.isNaN(Number(value))
+        Number.isNaN(
+            Number(value)
+        )
     ) {
 
         return "—";
@@ -2151,40 +2200,7 @@ function roundValue(
 
 
 /* =========================================================
-   UPDATE STATUS DATA
-   ========================================================= */
-
-function updateDataStatus() {
-
-    const updateText =
-        document.getElementById(
-            "updateText"
-        );
-
-
-    if (!updateText) {
-        return;
-    }
-
-
-    const now =
-        new Date();
-
-
-    updateText.textContent =
-        `Diperbarui ${now.toLocaleTimeString(
-            "id-ID",
-            {
-                hour: "2-digit",
-                minute: "2-digit"
-            }
-        )}`;
-
-}
-
-
-/* =========================================================
-   TANGGAL HEADER
+   DATE
    ========================================================= */
 
 function updateDateTime() {
@@ -2213,29 +2229,61 @@ function updateDateTime() {
 
 
 /* =========================================================
+   DATA STATUS
+   ========================================================= */
+
+function updateDataStatus() {
+
+    const element =
+        document.getElementById(
+            "updateText"
+        );
+
+
+    if (!element) {
+        return;
+    }
+
+
+    element.textContent =
+        `Diperbarui ${new Date().toLocaleTimeString(
+            "id-ID",
+            {
+                hour: "2-digit",
+                minute: "2-digit"
+            }
+        )}`;
+
+}
+
+
+/* =========================================================
    NAVIGATION
    ========================================================= */
 
 function setupNavigation() {
 
-    const navItems =
+    const items =
         document.querySelectorAll(
             ".nav-item, .mobile-nav-item"
         );
 
 
-    navItems.forEach(
+    items.forEach(
         item => {
 
             item.addEventListener(
                 "click",
                 () => {
 
-                    navItems.forEach(
-                        nav =>
-                            nav.classList.remove(
+                    items.forEach(
+                        other => {
+
+                            other.classList.remove(
                                 "active"
-                            )
+                            );
+
+                        }
                     );
 
 
@@ -2253,7 +2301,7 @@ function setupNavigation() {
 
 
 /* =========================================================
-   HOURLY HORIZONTAL SCROLL
+   HOURLY SCROLL
    ========================================================= */
 
 function setupHourlyScroll() {
@@ -2269,11 +2317,6 @@ function setupHourlyScroll() {
     }
 
 
-    /*
-     * Mouse wheel desktop bisa digunakan
-     * untuk menggeser prakiraan per jam.
-     */
-
     container.addEventListener(
         "wheel",
         event => {
@@ -2282,15 +2325,8 @@ function setupHourlyScroll() {
                 window.innerWidth <= 1100
             ) {
 
-                if (
-                    Math.abs(event.deltaY) >
-                    Math.abs(event.deltaX)
-                ) {
-
-                    container.scrollLeft +=
-                        event.deltaY;
-
-                }
+                container.scrollLeft +=
+                    event.deltaY;
 
             }
 
@@ -2351,40 +2387,6 @@ function showToast(
 
 
 /* =========================================================
-   AUTO REFRESH
-   =========================================================
-
-   Tidak melakukan GPS berulang-ulang.
-
-   Hanya memperbarui cuaca jika lokasi
-   sudah pernah diperoleh.
-
-   ========================================================= */
-
-setInterval(
-    () => {
-
-        if (!currentCoordinates) {
-            return;
-        }
-
-
-        loadWeatherForLocation(
-
-            currentCoordinates.latitude,
-
-            currentCoordinates.longitude,
-
-            false
-
-        );
-
-    },
-    15 * 60 * 1000
-);
-
-
-/* =========================================================
    ONLINE / OFFLINE
    ========================================================= */
 
@@ -2413,69 +2415,96 @@ window.addEventListener(
 
 
 /* =========================================================
-   ERROR GLOBAL
+   AUTO REFRESH CUACA
+   =========================================================
+
+   Setiap 15 menit:
+   - Tidak meminta GPS ulang
+   - Menggunakan koordinat terakhir
+   - Mengambil data cuaca terbaru
+
    ========================================================= */
 
-window.addEventListener(
-    "error",
-    event => {
+setInterval(
+    () => {
 
-        console.error(
-            "CUACAKU Error:",
-            event.error || event.message
+        if (!currentCoordinates) {
+            return;
+        }
+
+
+        loadWeatherForLocation(
+
+            currentCoordinates.latitude,
+
+            currentCoordinates.longitude,
+
+            false
+
         );
 
-    }
+    },
+    15 * 60 * 1000
 );
 
 
 /* =========================================================
-   DEBUG HELPER
-   =========================================================
-
-   Bisa digunakan melalui Console browser:
-
-   currentCoordinates
-   currentWeatherData
-   currentLocationData
-
+   DEBUG / CONSOLE
    ========================================================= */
 
 window.CUACAKU = {
 
-    getCoordinates:
+    coordinates:
         () => currentCoordinates,
 
-    getWeather:
-        () => currentWeatherData,
-
-    getLocation:
+    location:
         () => currentLocationData,
 
+    weather:
+        () => currentWeatherData,
+
     refresh:
-        () => {
+        () => refreshWeather(),
 
-            if (currentCoordinates) {
-
-                return loadWeatherForLocation(
-
-                    currentCoordinates.latitude,
-
-                    currentCoordinates.longitude
-
-                );
-
-            }
-
-
-            return requestLocation();
-
-        }
+    gps:
+        () => requestLocation()
 
 };
 
 
 /* =========================================================
-   SELESAI
+   ESCAPE HTML
    ========================================================= */
-```
+
+function escapeHTML(
+    value
+) {
+
+    return String(value)
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+/* =========================================================
+   END
+   ========================================================= */
