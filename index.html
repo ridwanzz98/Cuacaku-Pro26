@@ -3,114 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cuaca Premium ID Ultimate V2</title>
+    <title>Cuaca Premium ID Ultimate V3</title>
     
     <!-- Google Fonts: Poppins -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome (Hanya untuk ikon UI) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        /* Transisi Latar Belakang */
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
             color: #ffffff; min-height: 100vh;
             display: flex; justify-content: center; align-items: flex-start;
-            padding: 20px;
+            padding: 20px; transition: background 1.5s ease-in-out;
         }
-        .container { width: 100%; max-width: 600px; padding-bottom: 40px; }
 
-        /* Glassmorphism Card Style */
+        /* Latar Belakang Dinamis (Warna disesuaikan cuaca) */
+        .bg-day-clear { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .bg-day-cloudy { background: linear-gradient(135deg, #8e9eab, #eef2f3); color: #2c3e50; }
+        .bg-day-rain { background: linear-gradient(135deg, #3a7bd5, #3a6073); }
+        .bg-night-clear { background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); }
+        .bg-night-cloudy { background: linear-gradient(135deg, #141e30, #243b55); }
+        .bg-night-rain { background: linear-gradient(135deg, #000000, #434343); }
+
+        .container { width: 100%; max-width: 600px; padding-bottom: 40px; position: relative; }
+
+        /* Glassmorphism Global */
         .glass-card {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 24px; padding: 25px; margin-bottom: 20px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
         }
 
-        /* Search Bar */
-        .search-container { display: flex; gap: 10px; margin-bottom: 20px; }
+        /* Search Bar & Autocomplete */
+        .search-container { display: flex; gap: 10px; margin-bottom: 20px; position: relative; }
         .search-input {
             flex: 1; padding: 12px 20px; border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.2);
-            background: rgba(255,255,255,0.1); color: #fff;
-            font-family: 'Poppins', sans-serif; outline: none;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.15); color: inherit;
+            font-family: 'Poppins', sans-serif; outline: none; font-size: 1em;
         }
-        .search-input::placeholder { color: #b0bec5; }
+        .search-input::placeholder { color: inherit; opacity: 0.7; }
         .search-btn, .gps-btn {
             background: rgba(255,255,255,0.2); border: none;
-            color: #fff; padding: 12px 18px; border-radius: 20px;
+            color: inherit; padding: 12px 18px; border-radius: 20px;
             cursor: pointer; transition: 0.3s;
         }
         .search-btn:hover, .gps-btn:hover { background: rgba(255,255,255,0.4); }
+        
+        .suggestions-box {
+            position: absolute; top: 110%; left: 0; width: calc(100% - 60px);
+            background: rgba(255,255,255,0.95); color: #333; border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 100; max-height: 250px; overflow-y: auto;
+        }
+        .suggestion-item { padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.9em; }
+        .suggestion-item:last-child { border-bottom: none; }
+        .suggestion-item:hover { background: #f0f0f0; }
 
         /* Header / Lokasi */
-        .header { text-align: center; margin-bottom: 10px; }
-        .header h1 { font-size: 1.8em; font-weight: 600; margin-bottom: 5px; }
-        .header p { font-size: 0.9em; color: #b0bec5; }
+        .header { text-align: center; margin-bottom: 15px; }
+        .header h1 { font-size: 1.8em; font-weight: 600; margin-bottom: 2px; }
+        .header p { font-size: 0.9em; opacity: 0.8; }
+        .current-date { font-size: 0.85em; margin-top: 5px; font-weight: 500; opacity: 0.9; }
 
-        /* Suhu Saat Ini */
+        /* Suhu Saat Ini & Smart Insight */
         .current-weather { display: flex; flex-direction: column; align-items: center; text-align: center; }
-        .animated-icon-main { width: 130px; height: 130px; margin-top: 10px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
-        .temp-main { font-size: 4.5em; font-weight: 700; line-height: 1; margin: 5px 0; text-shadow: 2px 4px 10px rgba(0,0,0,0.3); }
+        .animated-icon-main { width: 140px; height: 140px; margin-top: 10px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.1)); }
+        .temp-main { font-size: 5em; font-weight: 700; line-height: 1; margin: 5px 0; text-shadow: 2px 4px 10px rgba(0,0,0,0.2); }
         .temp-desc-title { font-size: 1.3em; font-weight: 600; margin-bottom: 5px; text-transform: capitalize; }
-        .temp-desc-text { font-size: 0.9em; color: #cfd8dc; max-width: 80%; margin-bottom: 15px; line-height: 1.4; }
+        
+        .smart-insight {
+            background: rgba(0,0,0,0.15); padding: 10px 15px; border-radius: 20px;
+            font-size: 0.85em; margin: 15px 0; display: inline-flex; align-items: center; gap: 8px;
+        }
 
-        /* Grid Detail */
+        /* 4 Grid Detail Pertama */
         .details-grid {
             display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
-            padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.2);
         }
         .detail-item {
             display: flex; align-items: center; gap: 12px;
-            background: rgba(0,0,0,0.2); padding: 12px; border-radius: 16px;
+            background: rgba(0,0,0,0.1); padding: 12px; border-radius: 16px;
         }
-        .detail-icon { font-size: 1.5em; color: #90caf9; }
-        .detail-info p { font-size: 0.75em; color: #b0bec5; margin-bottom: 2px; }
+        .detail-icon { font-size: 1.5em; opacity: 0.9; }
+        .detail-info p { font-size: 0.75em; opacity: 0.8; margin-bottom: 2px; }
         .detail-info h4 { font-size: 1em; font-weight: 600; }
+
+        /* Grid Ekstra: Angin, Matahari, Bulan */
+        .extra-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;
+        }
+        .box-widget {
+            background: rgba(0,0,0,0.1); padding: 15px; border-radius: 16px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+        }
+        .box-title { font-size: 0.75em; opacity: 0.8; margin-bottom: 10px; width: 100%; text-align: left; }
+        
+        /* Kompas Angin */
+        .compass { width: 50px; height: 50px; border: 2px solid rgba(255,255,255,0.5); border-radius: 50%; position: relative; margin: 10px 0; }
+        .compass::after { content: 'U'; position: absolute; top: -15px; left: 50%; transform: translateX(-50%); font-size: 0.7em; font-weight: bold; }
+        .compass-needle { position: absolute; top: 50%; left: 50%; width: 4px; height: 40px; background: #e74c3c; transform-origin: bottom center; margin-top: -40px; margin-left: -2px; border-radius: 2px; transition: transform 1s ease; }
+        
+        /* Busur Matahari */
+        .sun-arc-container { position: relative; width: 100%; height: 50px; margin-top: 10px; overflow: hidden; }
+        .sun-arc { width: 100px; height: 100px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 50%; position: absolute; left: 50%; transform: translateX(-50%); top: 10px; }
+        .sun-pivot { position: absolute; left: 50%; top: 60px; width: 100px; height: 100px; margin-left: -50px; margin-top: -50px; transform-origin: center; transition: transform 1s; }
+        .sun-icon { position: absolute; top: -10px; left: 50%; margin-left: -10px; color: #f1c40f; font-size: 1.2em; text-shadow: 0 0 10px #f1c40f; }
+        .sun-times { display: flex; justify-content: space-between; width: 100%; font-size: 0.7em; margin-top: 5px; opacity: 0.8; }
+
+        /* Bulan Phase */
+        .moon-phase-icon { font-size: 2.5em; margin: 5px 0; text-shadow: 0 0 15px rgba(255,255,255,0.5); }
 
         /* Prakiraan Tab */
         .section-title { font-size: 1.1em; font-weight: 600; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        .tabs { display: flex; gap: 10px; margin-bottom: 15px; }
-        .tab-btn {
-            flex: 1; padding: 8px; background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2); border-radius: 12px;
-            color: #fff; font-family: 'Poppins'; cursor: pointer; transition: 0.3s;
-        }
-        .tab-btn.active { background: rgba(255,255,255,0.4); font-weight: 600; border-color: #fff; }
-
-        /* Prakiraan 3 Jam (Horizontal Scroll) */
         .hourly-scroll {
             display: flex; overflow-x: auto; gap: 15px; padding-bottom: 10px;
             scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) transparent;
         }
         .hourly-item { display: flex; flex-direction: column; align-items: center; min-width: 60px; gap: 5px; }
-        .hourly-time { font-size: 0.85em; color: #b0bec5; }
+        .hourly-time { font-size: 0.85em; opacity: 0.8; }
         .hourly-icon { width: 45px; height: 45px; }
         .hourly-temp { font-weight: 600; font-size: 1em; }
-        
-        /* Bar Indikator (Suhu & Hujan) */
-        .daily-list { display: flex; flex-direction: column; gap: 15px; }
+
+        /* Bar Indikator (Suhu 7 Hari) */
+        .daily-list { display: flex; flex-direction: column; gap: 12px; }
         .daily-item {
             display: grid; grid-template-columns: 2fr 1fr 1fr 3fr 1fr; align-items: center; gap: 10px;
-            padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.9em;
+            padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.9em;
         }
         .daily-item:last-child { border-bottom: none; padding-bottom: 0; }
         .daily-day { font-weight: 600; }
-        .daily-icon-img { width: 40px; height: 40px; margin: 0 auto; }
-        .rain-bar-container, .temp-bar-container { position: relative; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; width: 100%; margin: 5px 0; }
-        .rain-bar-fill { height: 100%; background: #3498db; border-radius: 3px; }
+        .daily-icon-img { width: 35px; height: 35px; margin: 0 auto; }
+        .temp-bar-container { position: relative; height: 6px; background: rgba(0,0,0,0.2); border-radius: 3px; width: 100%; margin: 5px 0; }
         .temp-bar-fill { position: absolute; height: 100%; background: linear-gradient(90deg, #5dade2, #f39c12); border-radius: 3px; }
         .temp-dot { position: absolute; width: 10px; height: 10px; background: #fff; border-radius: 50%; top: -2px; box-shadow: 0 0 4px rgba(0,0,0,0.5); z-index: 2; transform: translateX(-50%); }
-        .temp-text { text-align: center; color: #b0bec5; font-size: 0.85em; width: 30px;}
-        .col-flex { display: flex; flex-direction: column; align-items: center; width: 100%; }
-        .label-sm { font-size: 0.65em; color: #b0bec5; margin-bottom: 2px; }
+        .temp-text { text-align: center; font-size: 0.85em; width: 30px; opacity: 0.9;}
 
         /* Loading */
         #loading {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f2027;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f2027; color: #fff;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             z-index: 9999; text-align: center; padding: 20px;
         }
@@ -122,20 +159,20 @@
         .hidden { display: none !important; }
     </style>
 </head>
-<body>
+<body id="app-body" class="bg-day-clear">
 
     <div id="loading">
         <div class="spinner"></div>
         <h2 id="loading-text">Menyesuaikan Lokasi...</h2>
     </div>
 
-    <div class="container hidden" id="main-content">
+    <div class="container hidden" id="main-content" onclick="closeSuggestions()">
         
         <!-- Search Bar -->
         <div class="search-container">
-            <input type="text" id="search-input" class="search-input" placeholder="Cari kota (misal: Jakarta)..." onkeypress="handleSearch(event)">
-            <button class="search-btn" onclick="searchCity()"><i class="fas fa-search"></i></button>
+            <input type="text" id="search-input" class="search-input" placeholder="Cari Kecamatan/Kota..." oninput="handleSearchInput(event)" autocomplete="off">
             <button class="gps-btn" onclick="initApp()" title="Gunakan GPS"><i class="fas fa-location-crosshairs"></i></button>
+            <div id="suggestions" class="suggestions-box hidden"></div>
         </div>
         
         <!-- Header & Kondisi Saat Ini -->
@@ -143,15 +180,22 @@
             <div class="header">
                 <h1 id="kecamatan-name">Kecamatan</h1>
                 <p id="city-name">Kota/Kabupaten</p>
+                <div class="current-date" id="current-date">Senin, 1 Januari 2024</div>
             </div>
+            
             <div class="current-weather">
                 <img id="current-icon" class="animated-icon-main" src="" alt="icon">
                 <div class="temp-main"><span id="current-temp">--</span>°</div>
                 <div class="temp-desc-title" id="current-title">--</div>
-                <div class="temp-desc-text" id="current-desc">--</div>
+                
+                <!-- Smart Insight -->
+                <div class="smart-insight">
+                    <i id="insight-icon" class="fas fa-lightbulb"></i>
+                    <span id="insight-text">Memuat analisis...</span>
+                </div>
             </div>
 
-            <!-- Grid Ekstra -->
+            <!-- 4 Grid Utama -->
             <div class="details-grid">
                 <div class="detail-item">
                     <i class="fas fa-cloud-rain detail-icon"></i>
@@ -170,22 +214,34 @@
                     <div class="detail-info"><p>Kualitas Udara</p><h4 id="aqi-value">--</h4></div>
                 </div>
             </div>
+
+            <!-- Grid Ekstra Baru (Angin, Matahari, Fase Bulan) -->
+            <div class="extra-grid">
+                <!-- Kompas Angin -->
+                <div class="box-widget">
+                    <div class="box-title"><i class="fas fa-wind"></i> Angin</div>
+                    <div class="compass">
+                        <div class="compass-needle" id="compass-needle"></div>
+                    </div>
+                    <h4 style="margin-top: 5px;"><span id="wind-speed">--</span> km/h</h4>
+                </div>
+                
+                <!-- Matahari & Bulan (Tergantung Waktu) -->
+                <div class="box-widget" id="astro-widget">
+                    <!-- Disuntik melalui JS -->
+                </div>
+            </div>
         </div>
 
-        <!-- Prakiraan 3 Jam dengan Tab -->
+        <!-- Prakiraan 24 Jam ke Depan -->
         <div class="glass-card">
-            <div class="section-title"><i class="far fa-clock"></i> Prakiraan per 3 Jam</div>
-            <div class="tabs">
-                <button class="tab-btn active" id="tab-0" onclick="renderHourly(0)">Hari Ini</button>
-                <button class="tab-btn" id="tab-1" onclick="renderHourly(1)">Besok</button>
-                <button class="tab-btn" id="tab-2" onclick="renderHourly(2)">Lusa</button>
-            </div>
+            <div class="section-title"><i class="far fa-clock"></i> Prakiraan per Jam</div>
             <div class="hourly-scroll" id="hourly-container"></div>
         </div>
 
-        <!-- Indikator Suhu & Hujan Harian -->
+        <!-- Prakiraan 7 Hari -->
         <div class="glass-card">
-            <div class="section-title"><i class="far fa-calendar-alt"></i> Indikator Suhu & Hujan (3 Hari)</div>
+            <div class="section-title"><i class="far fa-calendar-alt"></i> Prakiraan 7 Hari</div>
             <div class="daily-list" id="daily-container"></div>
         </div>
 
@@ -193,33 +249,100 @@
 
     <script>
         let globalWeatherData = null; 
+        let searchTimeout = null;
 
-        // Mapping Kode WMO menggunakan Animated SVG dari amCharts (Sangat Stabil)
+        // Tampilkan Tanggal Saat Ini
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').textContent = new Date().toLocaleDateString('id-ID', dateOptions);
+
+        // Algoritma Fase Bulan (Emoji)
+        function getMoonPhaseEmoji() {
+            const date = new Date();
+            const lp = 2551442.8; // Lunar month in seconds
+            const now = date.getTime() / 1000;
+            const new_moon = new Date(1970, 0, 7, 20, 35, 0).getTime() / 1000;
+            const phase = ((now - new_moon) % lp) / lp; 
+            
+            if (phase < 0.03 || phase > 0.97) return { icon: "🌑", text: "Bulan Baru" };
+            if (phase < 0.22) return { icon: "🌒", text: "Sabit Awal" };
+            if (phase < 0.28) return { icon: "🌓", text: "Separuh Awal" };
+            if (phase < 0.47) return { icon: "🌔", text: "Cembung Awal" };
+            if (phase < 0.53) return { icon: "🌕", text: "Purnama" };
+            if (phase < 0.72) return { icon: "🌖", text: "Cembung Akhir" };
+            if (phase < 0.78) return { icon: "🌗", text: "Separuh Akhir" };
+            return { icon: "🌘", text: "Sabit Akhir" };
+        }
+
+        // --- PENCARIAN CERDAS (AUTOCOMPLETE) ---
+        function handleSearchInput(e) {
+            clearTimeout(searchTimeout);
+            const query = e.target.value.trim();
+            const box = document.getElementById('suggestions');
+            
+            if(query.length < 3) { box.classList.add('hidden'); return; }
+            
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&addressdetails=1&countrycodes=id&limit=5`);
+                    const data = await res.json();
+                    box.innerHTML = '';
+                    
+                    if(data.length === 0) {
+                        box.innerHTML = '<div class="suggestion-item">Lokasi tidak ditemukan</div>';
+                    } else {
+                        data.forEach(item => {
+                            const addr = item.address;
+                            const kec = addr.village || addr.suburb || addr.city_district || addr.town || "";
+                            const kab = addr.city || addr.county || "";
+                            const prov = addr.state || "";
+                            let text = `${kec ? kec+', ' : ''}${kab ? kab+', ' : ''}${prov}`.replace(/,\s*$/, "");
+                            if(!text) text = item.display_name;
+
+                            const div = document.createElement('div');
+                            div.className = 'suggestion-item';
+                            div.textContent = text;
+                            div.onclick = () => {
+                                document.getElementById('search-input').value = text;
+                                document.getElementById('kecamatan-name').textContent = kec || text;
+                                document.getElementById('city-name').textContent = kab || prov;
+                                box.classList.add('hidden');
+                                showLoading(`Memuat cuaca ${kec || text}...`);
+                                getWeatherData(parseFloat(item.lat), parseFloat(item.lon));
+                            };
+                            box.appendChild(div);
+                        });
+                    }
+                    box.classList.remove('hidden');
+                } catch(e) {}
+            }, 500); // Tunggu 500ms setelah mengetik berhenti
+        }
+
+        function closeSuggestions() {
+            document.getElementById('suggestions').classList.add('hidden');
+        }
+
+        // Data Cuaca Utama
         function getWeatherDetails(code, isDay = true) {
             const baseUrl = "https://www.amcharts.com/wp-content/themes/amcharts4/css/img/icons/weather/animated/";
-            
             const map = {
-                0: { title: "Cerah", text: "Cuaca cerah sempurna. Tidak ada tanda-tanda hujan.", icon: isDay ? "day.svg" : "night.svg" },
-                1: { title: "Cerah Berawan", text: "Langit cerah dengan sedikit awan yang melintas.", icon: isDay ? "cloudy-day-2.svg" : "cloudy-night-2.svg" },
-                2: { title: "Berawan", text: "Cukup banyak awan menutupi langit, namun belum ada potensi hujan.", icon: isDay ? "cloudy-day-3.svg" : "cloudy-night-3.svg" },
-                3: { title: "Mendung", text: "Langit mendung dan awan tebal. Matahari tertutup penuh.", icon: "cloudy.svg" },
-                45: { title: "Berkabut", text: "Jarak pandang terbatas karena kabut. Berhati-hatilah jika berkendara.", icon: "cloudy.svg" },
-                48: { title: "Kabut Tebal", text: "Kabut sangat tebal menyelimuti area ini.", icon: "cloudy.svg" },
-                51: { title: "Gerimis Ringan", text: "Terjadi gerimis tipis. Bawa payung jika ingin keluar.", icon: "rainy-4.svg" },
-                53: { title: "Gerimis", text: "Gerimis mulai turun secara merata.", icon: "rainy-5.svg" },
-                55: { title: "Gerimis Lebat", text: "Gerimis lebat yang cukup untuk membuat pakaian basah.", icon: "rainy-6.svg" },
-                61: { title: "Hujan Ringan", text: "Hujan intensitas ringan sedang turun. Jangan lupa siapkan jas hujan.", icon: "rainy-4.svg" },
-                63: { title: "Hujan Sedang", text: "Hujan turun secara stabil. Lebih baik berteduh jika sedang di luar.", icon: "rainy-5.svg" },
-                65: { title: "Hujan Lebat", text: "Terjadi hujan lebat. Waspadai genangan air di jalan.", icon: "rainy-6.svg" },
-                80: { title: "Hujan Deras Lokal", text: "Hujan deras turun tiba-tiba dalam waktu singkat.", icon: "rainy-7.svg" },
-                95: { title: "Badai Petir", text: "Badai dan petir terdeteksi. Sebaiknya tetap berada di dalam ruangan yang aman.", icon: "thunder.svg" },
-                96: { title: "Badai & Hujan Es", text: "Cuaca ekstrem, badai petir disertai potensi hujan es.", icon: "thunder.svg" },
-                99: { title: "Badai Hebat", text: "Badai petir parah sedang berlangsung. Sangat tidak disarankan keluar rumah.", icon: "thunder.svg" }
+                0: { title: "Cerah", icon: isDay ? "day.svg" : "night.svg", bgDay: 'bg-day-clear', bgNight: 'bg-night-clear' },
+                1: { title: "Cerah Berawan", icon: isDay ? "cloudy-day-2.svg" : "cloudy-night-2.svg", bgDay: 'bg-day-clear', bgNight: 'bg-night-clear' },
+                2: { title: "Berawan", icon: isDay ? "cloudy-day-3.svg" : "cloudy-night-3.svg", bgDay: 'bg-day-cloudy', bgNight: 'bg-night-cloudy' },
+                3: { title: "Mendung", icon: "cloudy.svg", bgDay: 'bg-day-cloudy', bgNight: 'bg-night-cloudy' },
+                45: { title: "Berkabut", icon: "cloudy.svg", bgDay: 'bg-day-cloudy', bgNight: 'bg-night-cloudy' },
+                48: { title: "Kabut Tebal", icon: "cloudy.svg", bgDay: 'bg-day-cloudy', bgNight: 'bg-night-cloudy' },
+                51: { title: "Gerimis Ringan", icon: "rainy-4.svg", bgDay: 'bg-day-rain', bgNight: 'bg-night-rain' },
+                53: { title: "Gerimis", icon: "rainy-5.svg", bgDay: 'bg-day-rain', bgNight: 'bg-night-rain' },
+                55: { title: "Gerimis Lebat", icon: "rainy-6.svg", bgDay: 'bg-day-rain', bgNight: 'bg-night-rain' },
+                61: { title: "Hujan Ringan", icon: "rainy-4.svg", bgDay: 'bg-day-rain', bgNight: 'bg-night-rain' },
+                63: { title: "Hujan Sedang", icon: "rainy-5.svg", bgDay: 'bg-day-rain', bgNight: 'bg-night-rain' },
+                65: { title: "Hujan Lebat", icon: "rainy-6.svg", bgDay: 'bg-day-rain', bgNight: 'bg-night-rain' },
+                80: { title: "Hujan Deras Lokal", icon: "rainy-7.svg", bgDay: 'bg-day-rain', bgNight: 'bg-night-rain' },
+                95: { title: "Badai Petir", icon: "thunder.svg", bgDay: 'bg-day-rain', bgNight: 'bg-night-rain' },
+                96: { title: "Badai & Hujan Es", icon: "thunder.svg", bgDay: 'bg-day-rain', bgNight: 'bg-night-rain' },
+                99: { title: "Badai Hebat", icon: "thunder.svg", bgDay: 'bg-day-rain', bgNight: 'bg-night-rain' }
             };
-
-            const data = map[code] || { title: "Berawan", text: "Kondisi cuaca didominasi awan.", icon: "cloudy.svg" };
-            
-            // Gabungkan URL dasar dengan nama file icon
+            const data = map[code] || { title: "Berawan", icon: "cloudy.svg", bgDay: 'bg-day-cloudy', bgNight: 'bg-night-cloudy' };
             data.icon = baseUrl + data.icon;
             return data;
         }
@@ -230,61 +353,76 @@
             document.getElementById('main-content').classList.add('hidden');
         }
 
-        async function getLocationName(lat, lon) {
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=id`);
-                const data = await res.json();
-                const addr = data.address;
-                document.getElementById('kecamatan-name').textContent = addr.village || addr.suburb || addr.city_district || addr.town || "Lokasi Anda";
-                document.getElementById('city-name').textContent = addr.city || addr.county || addr.state || data.name || "Indonesia";
-            } catch (error) {
-                document.getElementById('kecamatan-name').textContent = "Hasil Pencarian";
-                document.getElementById('city-name').textContent = `${lat.toFixed(2)}, ${lon.toFixed(2)}`;
-            }
-        }
-
         async function getAQI(lat, lon) {
             try {
                 const res = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=european_aqi`);
                 const data = await res.json();
                 const aqi = data.current.european_aqi;
-                let status = "Baik";
-                if(aqi > 50) status = "Sedang";
-                if(aqi > 100) status = "Buruk";
-                if(aqi > 150) status = "Sangat Buruk";
+                let status = "Baik"; if(aqi > 50) status = "Sedang"; if(aqi > 100) status = "Buruk";
                 document.getElementById('aqi-value').textContent = `${aqi} (${status})`;
             } catch(e) { document.getElementById('aqi-value').textContent = "N/A"; }
         }
 
         async function getWeatherData(lat, lon) {
             try {
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,weather_code&hourly=temperature_2m,weather_code,precipitation_probability,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,precipitation_probability_max&timezone=auto`;
+                // Gunakan past_days=1 untuk mengambil cuaca kemarin (guna perbandingan Smart Insight)
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,weather_code,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,weather_code,precipitation_probability,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,precipitation_probability_max,sunrise,sunset&timezone=auto&past_days=1`;
                 const res = await fetch(url);
                 globalWeatherData = await res.json();
                 
                 const cur = globalWeatherData.current;
-                const todayDaily = globalWeatherData.daily;
-                const weatherInfo = getWeatherDetails(cur.weather_code, cur.is_day === 1);
+                const daily = globalWeatherData.daily;
                 
-                // Update UI Utama
+                // Index 0 adalah kemarin, Index 1 adalah Hari Ini
+                const todayIndex = 1; 
+                const wInfo = getWeatherDetails(cur.weather_code, cur.is_day === 1);
+                
+                // Ubah Dynamic Background
+                const bodyEl = document.getElementById('app-body');
+                bodyEl.className = ''; // reset class
+                bodyEl.classList.add(cur.is_day === 1 ? wInfo.bgDay : wInfo.bgNight);
+                
+                // Update Utama
                 document.getElementById('current-temp').textContent = Math.round(cur.temperature_2m);
-                document.getElementById('current-title').textContent = weatherInfo.title;
-                document.getElementById('current-desc').textContent = weatherInfo.text;
-                document.getElementById('current-icon').src = weatherInfo.icon;
+                document.getElementById('current-title').textContent = wInfo.title;
+                document.getElementById('current-icon').src = wInfo.icon;
                 
-                // Grid Ekstra
+                // --- Smart Insight ---
+                // Cari index waktu saat ini di array hourly
+                const nowIso = cur.time.slice(0,14) + "00"; // format matching
+                const currentIndex = globalWeatherData.hourly.time.findIndex(t => t.includes(nowIso));
+                if(currentIndex >= 24) {
+                    const tempNow = cur.temperature_2m;
+                    const tempYesterday = globalWeatherData.hourly.temperature_2m[currentIndex - 24];
+                    const diff = tempNow - tempYesterday;
+                    const insightIcon = document.getElementById('insight-icon');
+                    
+                    if (Math.abs(diff) < 1) {
+                        document.getElementById('insight-text').textContent = "Suhu hari ini persis seperti kemarin.";
+                        insightIcon.className = "fas fa-equals";
+                    } else {
+                        const status = diff > 0 ? "hangat" : "dingin";
+                        document.getElementById('insight-text').textContent = `Terasa ${Math.abs(diff).toFixed(1)}°C lebih ${status} dari waktu ini kemarin.`;
+                        insightIcon.className = diff > 0 ? "fas fa-arrow-trend-up" : "fas fa-arrow-trend-down";
+                    }
+                }
+
+                // Grid 4 Detail
                 document.getElementById('humidity').textContent = cur.relative_humidity_2m + "%";
-                document.getElementById('uv-index').textContent = todayDaily.uv_index_max[0] || 0;
+                document.getElementById('uv-index').textContent = daily.uv_index_max[todayIndex] || 0;
                 
-                // Peluang Hujan Saat Ini
-                const currentHour = new Date().getHours();
-                const hrIndex = globalWeatherData.hourly.time.findIndex(t => new Date(t).getHours() === currentHour);
-                const rainChance = hrIndex !== -1 ? globalWeatherData.hourly.precipitation_probability[hrIndex] : 0;
-                document.getElementById('rain-chance').textContent = rainChance + "%";
+                const hrIndex = globalWeatherData.hourly.time.findIndex(t => new Date(t).getHours() === new Date().getHours() && new Date(t).getDate() === new Date().getDate());
+                document.getElementById('rain-chance').textContent = (hrIndex !== -1 ? globalWeatherData.hourly.precipitation_probability[hrIndex] : 0) + "%";
+
+                // Angin & Kompas
+                document.getElementById('wind-speed').textContent = Math.round(cur.wind_speed_10m);
+                document.getElementById('compass-needle').style.transform = `rotate(${cur.wind_direction_10m}deg)`;
+
+                // Animasi Matahari/Bulan
+                setupAstroWidget(daily.sunrise[todayIndex], daily.sunset[todayIndex], cur.is_day);
 
                 await getAQI(lat, lon);
-                
-                renderHourly(0); 
+                renderHourly(hrIndex !== -1 ? hrIndex : 24); // Start from current hour
                 renderDailyBars(); 
 
                 document.getElementById('loading').classList.add('hidden');
@@ -294,57 +432,95 @@
             }
         }
 
-        window.renderHourly = function(dayOffset) {
-            if(!globalWeatherData) return;
+        function setupAstroWidget(sunriseISO, sunsetISO, isDay) {
+            const container = document.getElementById('astro-widget');
             
-            for(let i=0; i<=2; i++) {
-                document.getElementById(`tab-${i}`).classList.remove('active');
-            }
-            document.getElementById(`tab-${dayOffset}`).classList.add('active');
+            if (isDay === 1) {
+                // Tampilkan Animasi Busur Matahari
+                const sRise = new Date(sunriseISO);
+                const sSet = new Date(sunsetISO);
+                const now = new Date();
+                
+                const totalDayMs = sSet - sRise;
+                const passedMs = now - sRise;
+                let percent = passedMs / totalDayMs;
+                if(percent < 0) percent = 0; if(percent > 1) percent = 1;
+                
+                // Konversi persen ke derajat rotasi (-90 = terbit, 0 = siang pucuk, 90 = tenggelam)
+                const angle = -90 + (percent * 180);
 
+                const tRiseStr = sRise.getHours().toString().padStart(2,'0') + ":" + sRise.getMinutes().toString().padStart(2,'0');
+                const tSetStr = sSet.getHours().toString().padStart(2,'0') + ":" + sSet.getMinutes().toString().padStart(2,'0');
+
+                container.innerHTML = `
+                    <div class="box-title"><i class="fas fa-sun"></i> Matahari</div>
+                    <div class="sun-arc-container">
+                        <div class="sun-arc"></div>
+                        <div class="sun-pivot" style="transform: rotate(${angle}deg);">
+                            <i class="fas fa-sun sun-icon"></i>
+                        </div>
+                    </div>
+                    <div class="sun-times"><span>${tRiseStr}</span><span>${tSetStr}</span></div>
+                `;
+            } else {
+                // Tampilkan Fase Bulan (Malam Hari)
+                const moon = getMoonPhaseEmoji();
+                container.innerHTML = `
+                    <div class="box-title"><i class="fas fa-moon"></i> Fase Bulan</div>
+                    <div class="moon-phase-icon">${moon.icon}</div>
+                    <h4>${moon.text}</h4>
+                `;
+            }
+        }
+
+        function renderHourly(startIndex) {
             const container = document.getElementById('hourly-container');
             container.innerHTML = '';
-
-            const targetDate = new Date();
-            targetDate.setDate(targetDate.getDate() + dayOffset);
-            const targetDayStr = targetDate.toISOString().split('T')[0];
-
-            for (let i = 0; i < globalWeatherData.hourly.time.length; i++) {
-                const t = new Date(globalWeatherData.hourly.time[i]);
-                const timeDayStr = t.toISOString().split('T')[0];
+            
+            // Render 24 jam ke depan
+            for (let i = startIndex; i < startIndex + 24; i++) {
+                if(!globalWeatherData.hourly.time[i]) break;
                 
-                if (timeDayStr === targetDayStr && t.getHours() % 3 === 0) {
-                    const temp = Math.round(globalWeatherData.hourly.temperature_2m[i]);
-                    const isDay = globalWeatherData.hourly.is_day[i] === 1;
-                    const wInfo = getWeatherDetails(globalWeatherData.hourly.weather_code[i], isDay);
-                    const timeLabel = t.getHours().toString().padStart(2, '0') + ':00';
+                const t = new Date(globalWeatherData.hourly.time[i]);
+                const temp = Math.round(globalWeatherData.hourly.temperature_2m[i]);
+                const isDay = globalWeatherData.hourly.is_day[i] === 1;
+                const wInfo = getWeatherDetails(globalWeatherData.hourly.weather_code[i], isDay);
+                
+                let timeLabel = t.getHours().toString().padStart(2, '0') + ':00';
+                if(i === startIndex) timeLabel = "Sekarang";
 
-                    container.innerHTML += `
-                        <div class="hourly-item">
-                            <span class="hourly-time">${timeLabel}</span>
-                            <img class="hourly-icon" src="${wInfo.icon}" alt="icon">
-                            <span class="hourly-temp">${temp}°</span>
-                        </div>
-                    `;
-                }
+                container.innerHTML += `
+                    <div class="hourly-item">
+                        <span class="hourly-time">${timeLabel}</span>
+                        <img class="hourly-icon" src="${wInfo.icon}" alt="icon">
+                        <span class="hourly-temp">${temp}°</span>
+                    </div>
+                `;
             }
-        };
+        }
 
         function renderDailyBars() {
             const container = document.getElementById('daily-container');
             container.innerHTML = '';
             
             const daily = globalWeatherData.daily;
-            const labels = ["Hari Ini", "Besok", "Lusa"];
             
-            let globalMin = Math.min(...daily.temperature_2m_min.slice(0,3));
-            let globalMax = Math.max(...daily.temperature_2m_max.slice(0,3));
+            // Cari batas min & max global untuk 7 hari ke depan (Mulai dari index 1 = Hari Ini)
+            let globalMin = Math.min(...daily.temperature_2m_min.slice(1,8));
+            let globalMax = Math.max(...daily.temperature_2m_max.slice(1,8));
             let range = globalMax - globalMin;
             if(range === 0) range = 1; 
 
             const currentTemp = globalWeatherData.current.temperature_2m;
+            const days = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
-            for (let i = 0; i < 3; i++) {
+            for (let i = 1; i <= 7; i++) {
+                if(!daily.time[i]) break;
+
+                const dateObj = new Date(daily.time[i]);
+                let dayLabel = days[dateObj.getDay()];
+                if(i === 1) dayLabel = "Hari Ini";
+
                 const minT = Math.round(daily.temperature_2m_min[i]);
                 const maxT = Math.round(daily.temperature_2m_max[i]);
                 const rainProb = daily.precipitation_probability_max[i];
@@ -354,7 +530,7 @@
                 const widthPercent = ((maxT - minT) / range) * 100;
                 
                 let dotHtml = '';
-                if(i === 0) {
+                if(i === 1) { // Dot hanya di baris "Hari Ini"
                     let dotPos = ((currentTemp - globalMin) / range) * 100;
                     if(dotPos < 0) dotPos = 0; if(dotPos > 100) dotPos = 100;
                     dotHtml = `<div class="temp-dot" style="left: ${dotPos}%;"></div>`;
@@ -362,14 +538,11 @@
 
                 container.innerHTML += `
                     <div class="daily-item">
-                        <div class="daily-day">${labels[i]}</div>
+                        <div class="daily-day">${dayLabel}</div>
                         <img class="daily-icon-img" src="${wInfo.icon}" alt="icon">
                         
-                        <div class="col-flex">
-                            <span class="label-sm">${rainProb}% ☔</span>
-                            <div class="rain-bar-container">
-                                <div class="rain-bar-fill" style="width: ${rainProb}%;"></div>
-                            </div>
+                        <div style="display:flex; flex-direction:column; align-items:center;">
+                            <span style="font-size:0.7em; color: #3498db; font-weight:600;">${rainProb}%</span>
                         </div>
 
                         <div style="display:flex; align-items:center; width:100%; gap:5px;">
@@ -385,26 +558,15 @@
             }
         }
 
-        async function searchCity() {
-            const q = document.getElementById('search-input').value;
-            if(!q) return;
-            showLoading(`Mencari ${q}...`);
+        async function getLocationName(lat, lon) {
             try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&accept-language=id`);
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=id`);
                 const data = await res.json();
-                if(data.length > 0) {
-                    document.getElementById('kecamatan-name').textContent = data[0].name || q;
-                    document.getElementById('city-name').textContent = (data[0].display_name.split(',')[1] || "").trim();
-                    getWeatherData(parseFloat(data[0].lat), parseFloat(data[0].lon));
-                } else {
-                    alert("Kota tidak ditemukan.");
-                    document.getElementById('loading').classList.add('hidden');
-                    document.getElementById('main-content').classList.remove('hidden');
-                }
-            } catch(e) { alert("Error saat mencari kota."); }
+                const addr = data.address;
+                document.getElementById('kecamatan-name').textContent = addr.village || addr.suburb || addr.city_district || addr.town || "Lokasi Anda";
+                document.getElementById('city-name').textContent = addr.city || addr.county || addr.state || data.name || "Indonesia";
+            } catch (error) {}
         }
-
-        function handleSearch(e) { if(e.key === 'Enter') searchCity(); }
 
         function initApp() {
             showLoading("Mencari Lokasi GPS...");
@@ -416,15 +578,11 @@
                         getWeatherData(pos.coords.latitude, pos.coords.longitude);
                     },
                     () => {
-                        alert("Akses GPS gagal. Menampilkan Jakarta.");
+                        alert("Akses GPS gagal. Menampilkan Ibu Kota Jakarta.");
                         getLocationName(-6.2088, 106.8456);
                         getWeatherData(-6.2088, 106.8456);
-                    },
-                    { enableHighAccuracy: true }
+                    }, { enableHighAccuracy: true }
                 );
-            } else {
-                getLocationName(-6.2088, 106.8456);
-                getWeatherData(-6.2088, 106.8456);
             }
         }
 
