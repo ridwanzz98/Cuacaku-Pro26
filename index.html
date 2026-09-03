@@ -53,7 +53,7 @@
 
         /* Suhu Saat Ini */
         .current-weather { display: flex; flex-direction: column; align-items: center; text-align: center; }
-        .animated-icon-main { width: 120px; height: 120px; margin-top: 10px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
+        .animated-icon-main { width: 130px; height: 130px; margin-top: 10px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
         .temp-main { font-size: 4.5em; font-weight: 700; line-height: 1; margin: 5px 0; text-shadow: 2px 4px 10px rgba(0,0,0,0.3); }
         .temp-desc-title { font-size: 1.3em; font-weight: 600; margin-bottom: 5px; text-transform: capitalize; }
         .temp-desc-text { font-size: 0.9em; color: #cfd8dc; max-width: 80%; margin-bottom: 15px; line-height: 1.4; }
@@ -79,7 +79,7 @@
             border: 1px solid rgba(255,255,255,0.2); border-radius: 12px;
             color: #fff; font-family: 'Poppins'; cursor: pointer; transition: 0.3s;
         }
-        .tab-btn.active { background: rgba(255,255,255,0.3); font-weight: 600; }
+        .tab-btn.active { background: rgba(255,255,255,0.4); font-weight: 600; border-color: #fff; }
 
         /* Prakiraan 3 Jam (Horizontal Scroll) */
         .hourly-scroll {
@@ -88,7 +88,7 @@
         }
         .hourly-item { display: flex; flex-direction: column; align-items: center; min-width: 60px; gap: 5px; }
         .hourly-time { font-size: 0.85em; color: #b0bec5; }
-        .hourly-icon { width: 40px; height: 40px; }
+        .hourly-icon { width: 45px; height: 45px; }
         .hourly-temp { font-weight: 600; font-size: 1em; }
         
         /* Bar Indikator (Suhu & Hujan) */
@@ -99,7 +99,7 @@
         }
         .daily-item:last-child { border-bottom: none; padding-bottom: 0; }
         .daily-day { font-weight: 600; }
-        .daily-icon-img { width: 35px; height: 35px; margin: 0 auto; }
+        .daily-icon-img { width: 40px; height: 40px; margin: 0 auto; }
         .rain-bar-container, .temp-bar-container { position: relative; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; width: 100%; margin: 5px 0; }
         .rain-bar-fill { height: 100%; background: #3498db; border-radius: 3px; }
         .temp-bar-fill { position: absolute; height: 100%; background: linear-gradient(90deg, #5dade2, #f39c12); border-radius: 3px; }
@@ -133,7 +133,7 @@
         
         <!-- Search Bar -->
         <div class="search-container">
-            <input type="text" id="search-input" class="search-input" placeholder="Cari kota..." onkeypress="handleSearch(event)">
+            <input type="text" id="search-input" class="search-input" placeholder="Cari kota (misal: Jakarta)..." onkeypress="handleSearch(event)">
             <button class="search-btn" onclick="searchCity()"><i class="fas fa-search"></i></button>
             <button class="gps-btn" onclick="initApp()" title="Gunakan GPS"><i class="fas fa-location-crosshairs"></i></button>
         </div>
@@ -151,7 +151,7 @@
                 <div class="temp-desc-text" id="current-desc">--</div>
             </div>
 
-            <!-- Grid Ekstra: Hujan, Kelembapan, UV, AQI -->
+            <!-- Grid Ekstra -->
             <div class="details-grid">
                 <div class="detail-item">
                     <i class="fas fa-cloud-rain detail-icon"></i>
@@ -192,32 +192,36 @@
     </div>
 
     <script>
-        let globalWeatherData = null; // Menyimpan data dari API
+        let globalWeatherData = null; 
 
-        // Mapping Kode WMO ke Icon Animasi SVG & Deskripsi
+        // Mapping Kode WMO menggunakan Animated SVG dari amCharts (Sangat Stabil)
         function getWeatherDetails(code, isDay = true) {
-            const baseUrl = "https://bmcdn.nl/assets/weather-icons/v3.0/fill/svg/";
-            const timeStr = isDay ? "day" : "night";
+            const baseUrl = "https://www.amcharts.com/wp-content/themes/amcharts4/css/img/icons/weather/animated/";
             
             const map = {
-                0: { title: "Cerah", text: "Cuaca cerah sempurna. Tidak ada tanda-tanda hujan, cocok untuk aktivitas di luar.", icon: `clear-${timeStr}.svg` },
-                1: { title: "Cerah Berawan", text: "Langit cerah dengan sedikit awan. Suhu terasa nyaman untuk beraktivitas.", icon: `partly-cloudy-${timeStr}.svg` },
-                2: { title: "Berawan", text: "Cukup banyak awan menutupi langit, namun belum ada potensi hujan.", icon: `partly-cloudy-${timeStr}.svg` },
-                3: { title: "Mendung", text: "Langit mendung dan awan tebal. Matahari tertutup penuh.", icon: `cloudy.svg` },
-                45: { title: "Berkabut", text: "Jarak pandang terbatas karena kabut. Berhati-hatilah jika berkendara.", icon: `fog.svg` },
-                48: { title: "Kabut Tebal", text: "Kabut sangat tebal menyelimuti area ini.", icon: `fog.svg` },
-                51: { title: "Gerimis Ringan", text: "Terjadi gerimis tipis. Bawa payung jika ingin keluar dalam waktu lama.", icon: `drizzle.svg` },
-                53: { title: "Gerimis", text: "Gerimis mulai turun secara merata.", icon: `drizzle.svg` },
-                55: { title: "Gerimis Lebat", text: "Gerimis lebat yang cukup untuk membuat pakaian basah.", icon: `drizzle.svg` },
-                61: { title: "Hujan Ringan", text: "Hujan intensitas ringan sedang turun. Jangan lupa siapkan jas hujan.", icon: `rain.svg` },
-                63: { title: "Hujan Sedang", text: "Hujan turun secara stabil. Lebih baik berteduh jika sedang di luar.", icon: `rain.svg` },
-                65: { title: "Hujan Lebat", text: "Terjadi hujan lebat. Waspadai genangan air di jalan.", icon: `extreme-rain.svg` },
-                80: { title: "Hujan Deras Lokal", text: "Hujan deras turun tiba-tiba dalam waktu singkat.", icon: `extreme-rain.svg` },
-                95: { title: "Badai Petir", text: "Badai dan petir terdeteksi. Sebaiknya tetap berada di dalam ruangan yang aman.", icon: `thunderstorms-${timeStr}-rain.svg` },
-                96: { title: "Badai & Hujan Es", text: "Cuaca ekstrem, badai petir disertai potensi hujan es.", icon: `thunderstorms.svg` },
-                99: { title: "Badai Hebat", text: "Badai petir parah sedang berlangsung. Sangat tidak disarankan keluar rumah.", icon: `thunderstorms.svg` }
+                0: { title: "Cerah", text: "Cuaca cerah sempurna. Tidak ada tanda-tanda hujan.", icon: isDay ? "day.svg" : "night.svg" },
+                1: { title: "Cerah Berawan", text: "Langit cerah dengan sedikit awan yang melintas.", icon: isDay ? "cloudy-day-2.svg" : "cloudy-night-2.svg" },
+                2: { title: "Berawan", text: "Cukup banyak awan menutupi langit, namun belum ada potensi hujan.", icon: isDay ? "cloudy-day-3.svg" : "cloudy-night-3.svg" },
+                3: { title: "Mendung", text: "Langit mendung dan awan tebal. Matahari tertutup penuh.", icon: "cloudy.svg" },
+                45: { title: "Berkabut", text: "Jarak pandang terbatas karena kabut. Berhati-hatilah jika berkendara.", icon: "cloudy.svg" },
+                48: { title: "Kabut Tebal", text: "Kabut sangat tebal menyelimuti area ini.", icon: "cloudy.svg" },
+                51: { title: "Gerimis Ringan", text: "Terjadi gerimis tipis. Bawa payung jika ingin keluar.", icon: "rainy-4.svg" },
+                53: { title: "Gerimis", text: "Gerimis mulai turun secara merata.", icon: "rainy-5.svg" },
+                55: { title: "Gerimis Lebat", text: "Gerimis lebat yang cukup untuk membuat pakaian basah.", icon: "rainy-6.svg" },
+                61: { title: "Hujan Ringan", text: "Hujan intensitas ringan sedang turun. Jangan lupa siapkan jas hujan.", icon: "rainy-4.svg" },
+                63: { title: "Hujan Sedang", text: "Hujan turun secara stabil. Lebih baik berteduh jika sedang di luar.", icon: "rainy-5.svg" },
+                65: { title: "Hujan Lebat", text: "Terjadi hujan lebat. Waspadai genangan air di jalan.", icon: "rainy-6.svg" },
+                80: { title: "Hujan Deras Lokal", text: "Hujan deras turun tiba-tiba dalam waktu singkat.", icon: "rainy-7.svg" },
+                95: { title: "Badai Petir", text: "Badai dan petir terdeteksi. Sebaiknya tetap berada di dalam ruangan yang aman.", icon: "thunder.svg" },
+                96: { title: "Badai & Hujan Es", text: "Cuaca ekstrem, badai petir disertai potensi hujan es.", icon: "thunder.svg" },
+                99: { title: "Badai Hebat", text: "Badai petir parah sedang berlangsung. Sangat tidak disarankan keluar rumah.", icon: "thunder.svg" }
             };
-            return map[code] || { title: "Tidak Diketahui", text: "Kondisi cuaca tidak dapat dipastikan.", icon: `not-available.svg` };
+
+            const data = map[code] || { title: "Berawan", text: "Kondisi cuaca didominasi awan.", icon: "cloudy.svg" };
+            
+            // Gabungkan URL dasar dengan nama file icon
+            data.icon = baseUrl + data.icon;
+            return data;
         }
 
         function showLoading(msg) {
@@ -266,13 +270,13 @@
                 document.getElementById('current-temp').textContent = Math.round(cur.temperature_2m);
                 document.getElementById('current-title').textContent = weatherInfo.title;
                 document.getElementById('current-desc').textContent = weatherInfo.text;
-                document.getElementById('current-icon').src = "https://bmcdn.nl/assets/weather-icons/v3.0/fill/svg/" + weatherInfo.icon;
+                document.getElementById('current-icon').src = weatherInfo.icon;
                 
                 // Grid Ekstra
                 document.getElementById('humidity').textContent = cur.relative_humidity_2m + "%";
                 document.getElementById('uv-index').textContent = todayDaily.uv_index_max[0] || 0;
                 
-                // Cari peluang hujan saat ini (berdasarkan jam sekarang)
+                // Peluang Hujan Saat Ini
                 const currentHour = new Date().getHours();
                 const hrIndex = globalWeatherData.hourly.time.findIndex(t => new Date(t).getHours() === currentHour);
                 const rainChance = hrIndex !== -1 ? globalWeatherData.hourly.precipitation_probability[hrIndex] : 0;
@@ -280,8 +284,8 @@
 
                 await getAQI(lat, lon);
                 
-                renderHourly(0); // Render Tab Hari Ini sbg default
-                renderDailyBars(); // Render Bar Suhu & Hujan
+                renderHourly(0); 
+                renderDailyBars(); 
 
                 document.getElementById('loading').classList.add('hidden');
                 document.getElementById('main-content').classList.remove('hidden');
@@ -290,11 +294,9 @@
             }
         }
 
-        // Fungsi Render Prakiraan Per 3 Jam berdasarkan Tab yang diklik
         window.renderHourly = function(dayOffset) {
             if(!globalWeatherData) return;
             
-            // Ubah style tab aktif
             for(let i=0; i<=2; i++) {
                 document.getElementById(`tab-${i}`).classList.remove('active');
             }
@@ -307,12 +309,10 @@
             targetDate.setDate(targetDate.getDate() + dayOffset);
             const targetDayStr = targetDate.toISOString().split('T')[0];
 
-            let count = 0;
             for (let i = 0; i < globalWeatherData.hourly.time.length; i++) {
                 const t = new Date(globalWeatherData.hourly.time[i]);
                 const timeDayStr = t.toISOString().split('T')[0];
                 
-                // Ambil data untuk tanggal yang sesuai, interval 3 jam
                 if (timeDayStr === targetDayStr && t.getHours() % 3 === 0) {
                     const temp = Math.round(globalWeatherData.hourly.temperature_2m[i]);
                     const isDay = globalWeatherData.hourly.is_day[i] === 1;
@@ -322,16 +322,14 @@
                     container.innerHTML += `
                         <div class="hourly-item">
                             <span class="hourly-time">${timeLabel}</span>
-                            <img class="hourly-icon" src="https://bmcdn.nl/assets/weather-icons/v3.0/fill/svg/${wInfo.icon}" alt="icon">
+                            <img class="hourly-icon" src="${wInfo.icon}" alt="icon">
                             <span class="hourly-temp">${temp}°</span>
                         </div>
                     `;
-                    count++;
                 }
             }
         };
 
-        // Fungsi Render Indikator Bar untuk Suhu & Hujan 3 Hari
         function renderDailyBars() {
             const container = document.getElementById('daily-container');
             container.innerHTML = '';
@@ -339,11 +337,10 @@
             const daily = globalWeatherData.daily;
             const labels = ["Hari Ini", "Besok", "Lusa"];
             
-            // Cari nilai suhu absolut (terendah & tertinggi) dari 3 hari ini
             let globalMin = Math.min(...daily.temperature_2m_min.slice(0,3));
             let globalMax = Math.max(...daily.temperature_2m_max.slice(0,3));
             let range = globalMax - globalMin;
-            if(range === 0) range = 1; // Hindari pembagian 0
+            if(range === 0) range = 1; 
 
             const currentTemp = globalWeatherData.current.temperature_2m;
 
@@ -353,13 +350,11 @@
                 const rainProb = daily.precipitation_probability_max[i];
                 const wInfo = getWeatherDetails(daily.weather_code[i], true);
 
-                // Kalkulasi Posisi Bar Suhu
                 const leftPercent = ((minT - globalMin) / range) * 100;
                 const widthPercent = ((maxT - minT) / range) * 100;
                 
                 let dotHtml = '';
                 if(i === 0) {
-                    // Hanya tampilkan titik suhu saat ini di baris "Hari Ini"
                     let dotPos = ((currentTemp - globalMin) / range) * 100;
                     if(dotPos < 0) dotPos = 0; if(dotPos > 100) dotPos = 100;
                     dotHtml = `<div class="temp-dot" style="left: ${dotPos}%;"></div>`;
@@ -368,9 +363,8 @@
                 container.innerHTML += `
                     <div class="daily-item">
                         <div class="daily-day">${labels[i]}</div>
-                        <img class="daily-icon-img" src="https://bmcdn.nl/assets/weather-icons/v3.0/fill/svg/${wInfo.icon}" alt="icon">
+                        <img class="daily-icon-img" src="${wInfo.icon}" alt="icon">
                         
-                        <!-- Bar Hujan -->
                         <div class="col-flex">
                             <span class="label-sm">${rainProb}% ☔</span>
                             <div class="rain-bar-container">
@@ -378,7 +372,6 @@
                             </div>
                         </div>
 
-                        <!-- Bar Suhu -->
                         <div style="display:flex; align-items:center; width:100%; gap:5px;">
                             <span class="temp-text">${minT}°</span>
                             <div class="temp-bar-container">
@@ -429,6 +422,9 @@
                     },
                     { enableHighAccuracy: true }
                 );
+            } else {
+                getLocationName(-6.2088, 106.8456);
+                getWeatherData(-6.2088, 106.8456);
             }
         }
 
