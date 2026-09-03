@@ -3,191 +3,455 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prakiraan Cuaca Lokal</title>
+    <title>Cuaca Premium ID</title>
+    
+    <!-- Google Fonts: Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome untuk Ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS untuk Peta Radar -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #74ebd5 0%, #9face6 100%);
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: #ffffff;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            color: #333;
+            align-items: flex-start;
+            padding: 20px;
         }
-        .weather-card {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding-bottom: 40px;
+        }
+
+        /* Glassmorphism Card Style */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        /* Header / Lokasi */
+        .header {
             text-align: center;
-            max-width: 400px;
-            width: 90%;
+            margin-bottom: 10px;
         }
-        .location {
-            font-size: 1.5em;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #2c3e50;
-        }
-        .sub-location {
-            font-size: 1em;
-            color: #7f8c8d;
-            margin-bottom: 20px;
-        }
-        .temperature {
-            font-size: 4em;
-            font-weight: bold;
-            margin: 10px 0;
-            color: #e74c3c;
-        }
-        .description {
-            font-size: 1.2em;
-            text-transform: capitalize;
-            margin-bottom: 20px;
+        .header h1 {
+            font-size: 1.8em;
             font-weight: 600;
+            margin-bottom: 5px;
         }
-        .details {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #ddd;
+        .header p {
+            font-size: 0.9em;
+            color: #b0bec5;
         }
-        .detail-item {
+
+        /* Suhu Saat Ini */
+        .current-weather {
             display: flex;
             flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .temp-main {
+            font-size: 5em;
+            font-weight: 700;
+            line-height: 1;
+            margin: 15px 0;
+            text-shadow: 2px 4px 10px rgba(0,0,0,0.3);
+        }
+        .temp-desc {
+            font-size: 1.2em;
+            text-transform: capitalize;
+            margin-bottom: 10px;
+        }
+        .temp-minmax {
+            font-size: 0.9em;
+            color: #cfd8dc;
+        }
+
+        /* Peta Radar */
+        .radar-container {
+            padding: 15px;
+        }
+        .section-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #map {
+            height: 250px;
+            border-radius: 16px;
+            width: 100%;
+            background: #1a1a1a;
+            z-index: 1;
+        }
+
+        /* Prakiraan 3 Jam (Horizontal Scroll) */
+        .hourly-scroll {
+            display: flex;
+            overflow-x: auto;
+            gap: 15px;
+            padding-bottom: 10px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.3) transparent;
+        }
+        .hourly-scroll::-webkit-scrollbar {
+            height: 6px;
+        }
+        .hourly-scroll::-webkit-scrollbar-thumb {
+            background-color: rgba(255,255,255,0.3);
+            border-radius: 10px;
+        }
+        .hourly-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 70px;
+            gap: 8px;
+        }
+        .hourly-time {
+            font-size: 0.85em;
+            color: #b0bec5;
+        }
+        .hourly-icon {
+            font-size: 1.5em;
+        }
+        .hourly-temp {
+            font-weight: 600;
+        }
+
+        /* Prakiraan 3 Hari */
+        .daily-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .daily-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .daily-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        .daily-day {
+            flex: 1;
+            font-weight: 600;
+        }
+        .daily-icon {
+            flex: 1;
+            text-align: center;
+            font-size: 1.2em;
+        }
+        .daily-temps {
+            flex: 1;
+            text-align: right;
             font-size: 0.9em;
         }
-        .detail-value {
-            font-weight: bold;
-            font-size: 1.2em;
-            color: #2980b9;
+        .daily-temps span {
+            display: inline-block;
+            width: 35px;
         }
+        .temp-low {
+            color: #90caf9;
+        }
+
+        /* Loading Screen */
         #loading {
-            font-size: 1.2em;
-            color: #34495e;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f2027;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            text-align: center;
+            padding: 20px;
         }
-        .hidden {
-            display: none;
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 40px; height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
         }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <div class="weather-card">
-        <div id="loading">Meminta akses lokasi...<br><small>Pastikan GPS Anda aktif</small></div>
+    <!-- Layar Loading -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <h2>Menyesuaikan Lokasi...</h2>
+        <p style="color: #b0bec5; margin-top: 10px; font-size: 0.9em;">Pastikan GPS/Lokasi perangkat Anda aktif.</p>
+    </div>
+
+    <!-- Konten Utama -->
+    <div class="container hidden" id="main-content">
         
-        <div id="weather-content" class="hidden">
-            <div class="location" id="kecamatan-name">Kecamatan</div>
-            <div class="sub-location" id="city-name">Kota/Kabupaten</div>
-            <div class="temperature"><span id="temp-value">--</span>°C</div>
-            <div class="description" id="weather-desc">Memuat cuaca...</div>
+        <!-- Header Lokasi & Suhu Saat Ini -->
+        <div class="glass-card">
+            <div class="header">
+                <h1 id="kecamatan-name">Kecamatan</h1>
+                <p id="city-name">Kota/Kabupaten</p>
+            </div>
             
-            <div class="details">
-                <div class="detail-item">
-                    <span>Angin</span>
-                    <span class="detail-value"><span id="wind-speed">--</span> km/h</span>
-                </div>
-                <div class="detail-item">
-                    <span>Arah Angin</span>
-                    <span class="detail-value"><span id="wind-dir">--</span>°</span>
+            <div class="current-weather">
+                <div class="temp-main"><span id="current-temp">--</span>°</div>
+                <div class="temp-desc" id="current-desc"><i class="fas fa-cloud"></i> Memuat...</div>
+                <div class="temp-minmax">
+                    Terasa seperti <span id="feels-like">--</span>° | H: <span id="today-high">--</span>° L: <span id="today-low">--</span>°
                 </div>
             </div>
         </div>
+
+        <!-- Prakiraan Per 3 Jam -->
+        <div class="glass-card">
+            <div class="section-title"><i class="far fa-clock"></i> Prakiraan per 3 Jam</div>
+            <div class="hourly-scroll" id="hourly-container">
+                <!-- Item disuntik via JS -->
+            </div>
+        </div>
+
+        <!-- Peta Radar Hujan -->
+        <div class="glass-card radar-container">
+            <div class="section-title"><i class="fas fa-satellite-dish"></i> Peta Radar Hujan</div>
+            <div id="map"></div>
+        </div>
+
+        <!-- Prakiraan 3 Hari (Sekarang, Besok, Lusa) -->
+        <div class="glass-card">
+            <div class="section-title"><i class="far fa-calendar-alt"></i> Prakiraan 3 Hari</div>
+            <div class="daily-list" id="daily-container">
+                <!-- Item disuntik via JS -->
+            </div>
+        </div>
+
     </div>
 
+    <!-- Script Leaflet (Peta) -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <script>
-        // Menerjemahkan kode cuaca WMO ke bahasa Indonesia
-        function getWeatherDescription(code) {
-            const weatherCodes = {
-                0: "Cerah",
-                1: "Cerah Berawan",
-                2: "Berawan",
-                3: "Mendung",
-                45: "Berkabut",
-                48: "Kabut Tebal",
-                51: "Gerimis Ringan",
-                53: "Gerimis Sedang",
-                55: "Gerimis Lebat",
-                61: "Hujan Ringan",
-                63: "Hujan Sedang",
-                65: "Hujan Lebat",
-                71: "Salju Ringan", // Hanya untuk antisipasi kode global
-                80: "Hujan Deras Lokal",
-                95: "Badai Petir",
-                96: "Badai Petir & Hujan Es",
-                99: "Badai Petir Hebat"
+        // Fungsi Mapping Kode Cuaca WMO ke Ikon FontAwesome & Deskripsi Bahasa Indonesia
+        function getWeatherDetails(code) {
+            const map = {
+                0: { desc: "Cerah", icon: "fas fa-sun", color: "#f1c40f" },
+                1: { desc: "Cerah Berawan", icon: "fas fa-cloud-sun", color: "#f39c12" },
+                2: { desc: "Berawan", icon: "fas fa-cloud", color: "#bdc3c7" },
+                3: { desc: "Mendung", icon: "fas fa-cloud", color: "#95a5a6" },
+                45: { desc: "Berkabut", icon: "fas fa-smog", color: "#ecf0f1" },
+                48: { desc: "Kabut Tebal", icon: "fas fa-smog", color: "#bdc3c7" },
+                51: { desc: "Gerimis Ringan", icon: "fas fa-cloud-rain", color: "#3498db" },
+                53: { desc: "Gerimis", icon: "fas fa-cloud-rain", color: "#2980b9" },
+                55: { desc: "Gerimis Lebat", icon: "fas fa-cloud-showers-heavy", color: "#2980b9" },
+                61: { desc: "Hujan Ringan", icon: "fas fa-cloud-rain", color: "#3498db" },
+                63: { desc: "Hujan Sedang", icon: "fas fa-cloud-showers-water", color: "#2980b9" },
+                65: { desc: "Hujan Lebat", icon: "fas fa-cloud-showers-heavy", color: "#2c3e50" },
+                80: { desc: "Hujan Deras Lokal", icon: "fas fa-cloud-showers-heavy", color: "#2c3e50" },
+                95: { desc: "Badai Petir", icon: "fas fa-bolt", color: "#8e44ad" },
+                96: { desc: "Badai & Hujan", icon: "fas fa-poo-storm", color: "#2c3e50" },
+                99: { desc: "Badai Hebat", icon: "fas fa-poo-storm", color: "#2c3e50" }
             };
-            return weatherCodes[code] || "Tidak diketahui";
+            return map[code] || { desc: "Tidak Diketahui", icon: "fas fa-question", color: "#fff" };
         }
 
-        // Mengambil nama lokasi berdasarkan koordinat
+        // Format waktu (09:00)
+        function formatTime(dateString) {
+            const date = new Date(dateString);
+            return date.getHours().toString().padStart(2, '0') + ':00';
+        }
+
+        // --- 1. Ambil Nama Lokasi (Reverse Geocoding) ---
         async function getLocationName(lat, lon) {
             try {
                 const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=id`);
                 const data = await response.json();
                 
-                const address = data.address;
-                // Mengutamakan nama kecamatan, desa, atau distrik
-                const kecamatan = address.village || address.suburb || address.city_district || address.town || "Lokasi Tidak Diketahui";
-                const kota = address.city || address.county || address.state || "";
+                const addr = data.address;
+                const kecamatan = addr.village || addr.suburb || addr.city_district || addr.town || "Lokasi Anda";
+                const kota = addr.city || addr.county || addr.state || "Indonesia";
                 
                 document.getElementById('kecamatan-name').textContent = kecamatan;
                 document.getElementById('city-name').textContent = kota;
             } catch (error) {
-                console.error("Gagal mengambil nama lokasi", error);
-                document.getElementById('kecamatan-name').textContent = "Koordinat Ditemukan";
-                document.getElementById('city-name').textContent = "Gagal memuat nama daerah";
+                document.getElementById('kecamatan-name').textContent = "Lokasi Ditemukan";
+                document.getElementById('city-name').textContent = `${lat.toFixed(2)}, ${lon.toFixed(2)}`;
             }
         }
 
-        // Mengambil data cuaca berdasarkan koordinat
+        // --- 2. Ambil Data Cuaca & Render UI ---
         async function getWeatherData(lat, lon) {
             try {
-                const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`;
+                const response = await fetch(url);
                 const data = await response.json();
-                const current = data.current_weather;
 
-                document.getElementById('temp-value').textContent = Math.round(current.temperature);
-                document.getElementById('wind-speed').textContent = current.windspeed;
-                document.getElementById('wind-dir').textContent = current.winddirection;
-                document.getElementById('weather-desc').textContent = getWeatherDescription(current.weathercode);
+                // Render Cuaca Saat Ini
+                const current = data.current;
+                const todayDaily = data.daily;
+                const weatherInfo = getWeatherDetails(current.weather_code);
+                
+                document.getElementById('current-temp').textContent = Math.round(current.temperature_2m);
+                document.getElementById('feels-like').textContent = Math.round(current.apparent_temperature);
+                document.getElementById('current-desc').innerHTML = `<i class="${weatherInfo.icon}" style="color:${weatherInfo.color}"></i> ${weatherInfo.desc}`;
+                document.getElementById('today-high').textContent = Math.round(todayDaily.temperature_2m_max[0]);
+                document.getElementById('today-low').textContent = Math.round(todayDaily.temperature_2m_min[0]);
 
-                // Sembunyikan loading, tampilkan cuaca
+                // Render Prakiraan Per 3 Jam
+                const hourlyContainer = document.getElementById('hourly-container');
+                hourlyContainer.innerHTML = ''; // Bersihkan kontainer
+                const currentHour = new Date().getHours();
+                
+                // Cari index waktu saat ini di array hourly API
+                let startIndex = data.hourly.time.findIndex(t => new Date(t).getHours() === currentHour);
+                if(startIndex === -1) startIndex = 0;
+
+                // Ambil data setiap kelipatan 3 jam sebanyak 8 data (24 Jam)
+                for (let i = startIndex; i < startIndex + 24; i += 3) {
+                    if(!data.hourly.time[i]) break; // Hindari out of bounds
+                    
+                    const time = formatTime(data.hourly.time[i]);
+                    const temp = Math.round(data.hourly.temperature_2m[i]);
+                    const wDetail = getWeatherDetails(data.hourly.weather_code[i]);
+                    
+                    const item = document.createElement('div');
+                    item.className = 'hourly-item';
+                    item.innerHTML = `
+                        <span class="hourly-time">${i === startIndex ? 'Sekarang' : time}</span>
+                        <i class="${wDetail.icon} hourly-icon" style="color:${wDetail.color}"></i>
+                        <span class="hourly-temp">${temp}°</span>
+                    `;
+                    hourlyContainer.appendChild(item);
+                }
+
+                // Render Prakiraan 3 Hari (Sekarang, Besok, Lusa)
+                const dailyContainer = document.getElementById('daily-container');
+                dailyContainer.innerHTML = '';
+                const dayLabels = ["Hari ini", "Besok", "Lusa"];
+
+                for (let i = 0; i < 3; i++) {
+                    const max = Math.round(data.daily.temperature_2m_max[i]);
+                    const min = Math.round(data.daily.temperature_2m_min[i]);
+                    const wDetail = getWeatherDetails(data.daily.weather_code[i]);
+
+                    const item = document.createElement('div');
+                    item.className = 'daily-item';
+                    item.innerHTML = `
+                        <div class="daily-day">${dayLabels[i]}</div>
+                        <div class="daily-icon"><i class="${wDetail.icon}" style="color:${wDetail.color}"></i></div>
+                        <div class="daily-temps">
+                            <span class="temp-low">${min}°</span> 
+                            <span>${max}°</span>
+                        </div>
+                    `;
+                    dailyContainer.appendChild(item);
+                }
+
+                // Tampilkan Konten Utama & Matikan Loading
                 document.getElementById('loading').classList.add('hidden');
-                document.getElementById('weather-content').classList.remove('hidden');
+                document.getElementById('main-content').classList.remove('hidden');
+
+                // Render Peta (harus setelah div map tidak di-display:none)
+                initRadarMap(lat, lon);
 
             } catch (error) {
-                console.error("Gagal mengambil data cuaca", error);
-                document.getElementById('loading').innerHTML = "Gagal memuat data cuaca. Silakan muat ulang halaman.";
+                console.error(error);
+                document.getElementById('loading').innerHTML = "<h2>Gagal memuat data cuaca.</h2><p>Silakan muat ulang halaman.</p>";
             }
         }
 
-        // Meminta akses lokasi perangkat
-        function initGeolocation() {
+        // --- 3. Inisialisasi Peta Radar Hujan (Leaflet + RainViewer) ---
+        async function initRadarMap(lat, lon) {
+            // Hindari inisialisasi ganda jika fungsi terpanggil dua kali
+            if (window.mapInstance) return; 
+
+            // Buat Peta, pusatkan di lokasi pengguna
+            const map = L.map('map', { zoomControl: false }).setView([lat, lon], 10);
+            window.mapInstance = map;
+
+            // Tambahkan Base Map dari OpenStreetMap versi Dark/CartoDB
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Tambahkan Marker Lokasi Pengguna
+            L.marker([lat, lon]).addTo(map);
+
+            // Ambil Timestamp Data Radar Hujan Terbaru dari RainViewer
+            try {
+                const rvResponse = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+                const rvData = await rvResponse.json();
+                
+                // Ambil timestamp dari radar paling terbaru (past)
+                const latestPastIndex = rvData.radar.past.length - 1;
+                const latestTimestamp = rvData.radar.past[latestPastIndex].time;
+
+                // Tambahkan layer radar cuaca
+                L.tileLayer(`https://tilecache.rainviewer.com/v2/radar/${latestTimestamp}/256/{z}/{x}/{y}/2/1_1.png`, {
+                    opacity: 0.65,
+                    zIndex: 10
+                }).addTo(map);
+
+            } catch(e) {
+                console.error("Gagal memuat radar hujan", e);
+            }
+        }
+
+        // --- 4. Meminta Izin Lokasi Perangkat ---
+        function initApp() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         const lat = position.coords.latitude;
                         const lon = position.coords.longitude;
-                        
                         getLocationName(lat, lon);
                         getWeatherData(lat, lon);
                     },
                     (error) => {
-                        let msg = "Gagal mendapatkan lokasi.";
-                        if(error.code === 1) msg = "Akses lokasi ditolak oleh pengguna.";
-                        document.getElementById('loading').innerHTML = msg + "<br><small>Izinkan akses lokasi di pengaturan browser Anda.</small>";
-                    }
+                        document.getElementById('loading').innerHTML = `
+                            <h2>Akses Lokasi Ditolak/Gagal</h2>
+                            <p style="color: #b0bec5; margin-top: 10px;">Izinkan akses GPS pada browser/perangkat Anda, lalu muat ulang halaman.</p>
+                        `;
+                    },
+                    { enableHighAccuracy: true }
                 );
             } else {
-                document.getElementById('loading').textContent = "Browser Anda tidak mendukung Geolocation.";
+                document.getElementById('loading').innerHTML = "Browser Anda tidak mendukung fitur Lokasi.";
             }
         }
 
-        // Jalankan saat halaman dimuat
-        window.onload = initGeolocation;
+        // Jalankan saat web dibuka
+        window.onload = initApp;
     </script>
 </body>
 </html>
