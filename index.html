@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cuaca Premium ID Ultimate V3</title>
+    <title>Cuaca Pro Ultimate</title>
     
     <link rel="manifest" href="data:application/manifest+json;utf8,{%22name%22:%22Cuaca%20Premium%20ID%22,%22short_name%22:%22CuacaID%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%230f2027%22,%22theme_color%22:%22%234facfe%22}">
     <meta name="theme-color" content="#0f2027">
@@ -29,7 +29,7 @@
         .bg-night-cloudy { background: linear-gradient(135deg, #141e30, #243b55); }
         .bg-night-rain { background: linear-gradient(135deg, #000000, #434343); }
 
-        .container { width: 100%; max-width: 600px; padding-bottom: 40px; position: relative; }
+        .container { width: 100%; max-width: 600px; padding-bottom: 20px; position: relative; }
 
         /* Glassmorphism */
         .glass-card {
@@ -139,11 +139,12 @@
         .compass-needle { position: absolute; top: 50%; left: 50%; width: 4px; height: 40px; background: #e74c3c; transform-origin: bottom center; margin-top: -40px; margin-left: -2px; border-radius: 2px; transition: transform 1s ease; }
         
         /* Busur Animasi Matahari & Bulan */
-        .astro-arc-container { position: relative; width: 100%; height: 50px; margin-top: 10px; overflow: hidden; }
+        .astro-arc-container { position: relative; width: 100%; height: 50px; margin-top: 5px; overflow: hidden; }
         .astro-arc { width: 100px; height: 100px; border: 2px dashed rgba(255,255,255,0.5); border-radius: 50%; position: absolute; left: 50%; transform: translateX(-50%); top: 10px; }
         .astro-pivot { position: absolute; left: 50%; top: 60px; width: 100px; height: 100px; margin-left: -50px; margin-top: -50px; transform-origin: center; transition: transform 1.2s ease-in-out; }
         .astro-icon { position: absolute; top: -10px; left: 50%; margin-left: -10px; font-size: 1.2em; filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)); }
         .astro-times { display: flex; justify-content: space-between; width: 100%; font-size: 0.7em; margin-top: 5px; opacity: 0.8; }
+        .day-length-info { font-size: 0.72em; opacity: 0.9; margin-top: 8px; font-weight: 500; background: rgba(0,0,0,0.15); padding: 4px 8px; border-radius: 10px; width: 100%; }
 
         /* Section Title & Day Tabs */
         .section-title { font-size: 1.1em; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
@@ -175,19 +176,27 @@
         .hourly-rain { font-size: 0.7em; color: #3498db; font-weight: 600; }
         .hourly-desc { font-size: 0.68em; opacity: 0.85; margin-top: 2px; height: 2.2em; display: flex; align-items: center; justify-content: center; line-height: 1.1; }
 
-        /* Daily Bar List */
-        .daily-list { display: flex; flex-direction: column; gap: 12px; }
-        .daily-item {
-            display: grid; grid-template-columns: 2fr 1fr 1fr 3fr 1fr; align-items: center; gap: 10px;
-            padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.9em;
+        /* Hijri Moon Calendar Scroll */
+        .hijri-scroll {
+            display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px;
+            scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) transparent;
         }
-        .daily-item:last-child { border-bottom: none; padding-bottom: 0; }
-        .daily-day { font-weight: 600; }
-        .daily-icon-img { width: 35px; height: 35px; margin: 0 auto; }
-        .temp-bar-container { position: relative; height: 6px; background: rgba(0,0,0,0.2); border-radius: 3px; width: 100%; margin: 5px 0; }
-        .temp-bar-fill { position: absolute; height: 100%; background: linear-gradient(90deg, #5dade2, #f39c12); border-radius: 3px; }
-        .temp-dot { position: absolute; width: 100px; height: 10px; background: #fff; border-radius: 50%; top: -2px; box-shadow: 0 0 4px rgba(0,0,0,0.5); z-index: 2; transform: translateX(-50%); width: 10px; }
-        .temp-text { text-align: center; font-size: 0.85em; width: 30px; opacity: 0.9;}
+        .hijri-card {
+            min-width: 110px; background: rgba(0,0,0,0.12); padding: 12px 10px; border-radius: 18px;
+            display: flex; flex-direction: column; align-items: center; text-align: center;
+            border: 1px solid rgba(255,255,255,0.1); transition: 0.3s;
+        }
+        .hijri-card.today { background: rgba(241,196,15,0.25); border-color: rgba(241,196,15,0.6); }
+        .hijri-masehi { font-size: 0.75em; opacity: 0.8; font-weight: 500; }
+        .hijri-moon-icon { font-size: 2em; margin: 6px 0; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        .hijri-date-text { font-size: 0.8em; font-weight: 600; color: #f1c40f; }
+        .hijri-phase-name { font-size: 0.7em; opacity: 0.85; margin-top: 2px; }
+
+        /* Footer Version Notice */
+        .version-footer {
+            text-align: center; font-size: 0.78em; opacity: 0.75;
+            padding: 15px 0; border-top: 1px solid rgba(255,255,255,0.15); margin-top: 10px;
+        }
 
         /* Loading */
         #loading {
@@ -289,14 +298,18 @@
         </div>
 
         <div class="glass-card">
+            <div class="section-title"><i class="fas fa-moon" style="color: #f1c40f;"></i> Kalender Hijriah & Fase Bulan</div>
+            <div class="hijri-scroll" id="hijri-calendar-container"></div>
+        </div>
+
+        <div class="glass-card">
             <div class="section-title"><i class="far fa-clock"></i> Prakiraan per Jam (7 Hari)</div>
             <div class="hourly-day-tabs" id="hourly-tabs"></div>
             <div class="hourly-scroll" id="hourly-container"></div>
         </div>
 
-        <div class="glass-card">
-            <div class="section-title"><i class="far fa-calendar-alt"></i> Prakiraan 7 Hari</div>
-            <div class="daily-list" id="daily-container"></div>
+        <div class="version-footer">
+            Cuaca Premium ID Ultimate • <strong>Update Version 1.0.1</strong>
         </div>
 
     </div>
@@ -313,7 +326,7 @@
 
         let deferredPrompt = null;
 
-        // --- FITUR PWA INSTALL PROMPT ---
+        // PWA Install Prompt
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
@@ -323,7 +336,7 @@
         function installPWA() {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
+                deferredPrompt.userChoice.then(() => {
                     deferredPrompt = null;
                     document.getElementById('pwa-install-banner').classList.add('hidden');
                 });
@@ -338,7 +351,7 @@
         const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         document.getElementById('current-date').textContent = new Date().toLocaleDateString('id-ID', dateOptions);
 
-        // --- SISTEM FAVORIT ---
+        // Sistem Favorit
         function renderFavorites() {
             const container = document.getElementById('favorites-container');
             let favs = JSON.parse(localStorage.getItem('weather_favs') || '[]');
@@ -402,9 +415,8 @@
             }
         }
 
-        // Algoritma Fase Bulan
-        function getMoonPhaseEmoji() {
-            const date = new Date();
+        // Kalkulasi Fase Bulan berdasarkan Tanggal
+        function getMoonPhaseForDate(date) {
             const lp = 2551442.8; 
             const now = date.getTime() / 1000;
             const new_moon = new Date(1970, 0, 7, 20, 35, 0).getTime() / 1000;
@@ -413,14 +425,58 @@
             if (phase < 0.03 || phase > 0.97) return { icon: "🌑", text: "Bulan Baru" };
             if (phase < 0.22) return { icon: "🌒", text: "Sabit Awal" };
             if (phase < 0.28) return { icon: "🌓", text: "Separuh Awal" };
-            if (phase < 0.47) return { icon: "🌔", text: "Cembung Awal" };
+            if (phase < 0.47) return { icon: "m🌔", text: "Cembung Awal" };
             if (phase < 0.53) return { icon: "🌕", text: "Purnama" };
             if (phase < 0.72) return { icon: "🌖", text: "Cembung Akhir" };
             if (phase < 0.78) return { icon: "🌗", text: "Separuh Akhir" };
             return { icon: "🌘", text: "Sabit Akhir" };
         }
 
-        // --- FITUR KETERANGAN KECIL CUACA ---
+        // Konversi Tanggal Masehi ke Tanggal Hijriah
+        function getHijriDateString(date) {
+            try {
+                const formatter = new Intl.DateTimeFormat('id-ID-u-ca-islamic-umalqura', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+                return formatter.format(date);
+            } catch(e) {
+                return "";
+            }
+        }
+
+        // Render Kalender Hijriah & Fase Bulan
+        function renderHijriCalendar() {
+            const container = document.getElementById('hijri-calendar-container');
+            container.innerHTML = '';
+            
+            const today = new Date();
+            const daysShort = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+
+            // Tampilkan 30 hari dimulai dari hari ini
+            for (let i = 0; i < 30; i++) {
+                const targetDate = new Date();
+                targetDate.setDate(today.getDate() + i);
+
+                const dayName = daysShort[targetDate.getDay()];
+                const masehiStr = `${dayName}, ${targetDate.getDate()} ${targetDate.toLocaleDateString('id-ID', {month:'short'})}`;
+                const hijriStr = getHijriDateString(targetDate);
+                const moon = getMoonPhaseForDate(targetDate);
+
+                const card = document.createElement('div');
+                card.className = `hijri-card ${i === 0 ? 'today' : ''}`;
+                card.innerHTML = `
+                    <span class="hijri-masehi">${masehiStr}</span>
+                    <span class="hijri-moon-icon">${moon.icon}</span>
+                    <span class="hijri-date-text">${hijriStr}</span>
+                    <span class="hijri-phase-name">${moon.text}</span>
+                `;
+                container.appendChild(card);
+            }
+        }
+
+        // Keterangan Cuaca Detail
         function getWeatherDetails(code, isDay = true) {
             const baseUrl = "https://www.amcharts.com/wp-content/themes/amcharts4/css/img/icons/weather/animated/";
             const map = {
@@ -521,7 +577,6 @@
                 currentLat = lat; currentLon = lon;
                 checkCurrentFavorite();
 
-                // Fetch 8 hari (1 hari lalu + 7 hari ke depan)
                 const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,weather_code,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,weather_code,precipitation_probability,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,precipitation_probability_max,sunrise,sunset&timezone=auto&past_days=1&forecast_days=8`;
                 const res = await fetch(url);
                 globalWeatherData = await res.json();
@@ -536,10 +591,10 @@
                 bodyEl.className = ''; 
                 bodyEl.classList.add(cur.is_day === 1 ? wInfo.bgDay : wInfo.bgNight);
                 
-                // Update Suhu & Keterangan Tambahan
+                // Update Suhu & Keterangan
                 document.getElementById('current-temp').textContent = Math.round(cur.temperature_2m);
                 document.getElementById('current-title').textContent = wInfo.title;
-                document.getElementById('current-subdesc').textContent = wInfo.desc; // Keterangan kecil
+                document.getElementById('current-subdesc').textContent = wInfo.desc;
                 document.getElementById('current-icon').src = wInfo.icon;
                 
                 // Smart Insight
@@ -572,13 +627,13 @@
                 document.getElementById('wind-speed').textContent = Math.round(cur.wind_speed_10m);
                 document.getElementById('compass-needle').style.transform = `rotate(${cur.wind_direction_10m}deg)`;
 
-                // Animasi Busur Matahari / Bulan
+                // Animasi Busur Matahari / Bulan & Panjang Hari/Malam
                 setupAstroWidget(daily.sunrise[todayIndex], daily.sunset[todayIndex], cur.is_day);
 
                 await getAQI(lat, lon);
+                renderHijriCalendar(); // Render Kalender Hijriah
                 renderHourlyTabs();
                 renderHourlyForDay(selectedDayIndex); 
-                renderDailyBars(); 
 
                 document.getElementById('loading').classList.add('hidden');
                 document.getElementById('main-content').classList.remove('hidden');
@@ -587,24 +642,35 @@
             }
         }
 
-        // --- FITUR ANIMASI MATAHARI & BULAN TERBIT/TENGGELAM ---
+        // ANIMASI MATAHARI & BULAN + DURASI PANJANG HARI & MALAM
         function setupAstroWidget(sunriseISO, sunsetISO, isDay) {
             const container = document.getElementById('astro-widget');
             
+            const sRise = new Date(sunriseISO);
+            const sSet = new Date(sunsetISO);
+            const now = new Date();
+
+            // Hitung Panjang Siang (Hari) & Malam
+            const dayLengthMs = sSet - sRise;
+            const nightLengthMs = (24 * 60 * 60 * 1000) - dayLengthMs;
+
+            const dayHours = Math.floor(dayLengthMs / (1000 * 60 * 60));
+            const dayMins = Math.floor((dayLengthMs % (1000 * 60 * 60)) / (1000 * 60));
+
+            const nightHours = Math.floor(nightLengthMs / (1000 * 60 * 60));
+            const nightMins = Math.floor((nightLengthMs % (1000 * 60 * 60)) / (1000 * 60));
+
+            const tRiseStr = sRise.getHours().toString().padStart(2,'0') + ":" + sRise.getMinutes().toString().padStart(2,'0');
+            const tSetStr = sSet.getHours().toString().padStart(2,'0') + ":" + sSet.getMinutes().toString().padStart(2,'0');
+
             if (isDay === 1) {
                 // Siang: Animasi Lintasan Matahari
-                const sRise = new Date(sunriseISO);
-                const sSet = new Date(sunsetISO);
-                const now = new Date();
-                
                 const totalDayMs = sSet - sRise;
                 const passedMs = now - sRise;
                 let percent = passedMs / totalDayMs;
                 if(percent < 0) percent = 0; if(percent > 1) percent = 1;
                 
                 const angle = -90 + (percent * 180);
-                const tRiseStr = sRise.getHours().toString().padStart(2,'0') + ":" + sRise.getMinutes().toString().padStart(2,'0');
-                const tSetStr = sSet.getHours().toString().padStart(2,'0') + ":" + sSet.getMinutes().toString().padStart(2,'0');
 
                 container.innerHTML = `
                     <div class="box-title"><i class="fas fa-sun"></i> Matahari Terbit/Tenggelam</div>
@@ -615,13 +681,12 @@
                         </div>
                     </div>
                     <div class="astro-times"><span><i class="fas fa-arrow-up"></i> ${tRiseStr}</span><span><i class="fas fa-arrow-down"></i> ${tSetStr}</span></div>
+                    <div class="day-length-info"><i class="fas fa-clock"></i> Siang: ${dayHours}j ${dayMins}m</div>
                 `;
             } else {
                 // Malam: Animasi Lintasan Bulan & Fase Bulan
-                const moon = getMoonPhaseEmoji();
-                const now = new Date();
+                const moon = getMoonPhaseForDate(now);
                 const hours = now.getHours();
-                // Estimasi sudut bulan malam hari
                 let nightPercent = ((hours >= 18 ? hours - 18 : hours + 6)) / 12;
                 if(nightPercent < 0) nightPercent = 0; if(nightPercent > 1) nightPercent = 1;
                 const angle = -90 + (nightPercent * 180);
@@ -635,11 +700,12 @@
                         </div>
                     </div>
                     <div class="astro-times"><span>18:00</span><span>06:00</span></div>
+                    <div class="day-length-info"><i class="fas fa-moon"></i> Malam: ${nightHours}j ${nightMins}m</div>
                 `;
             }
         }
 
-        // --- FITUR PRAKIRAAN PER JAM 7 HARI BESERTA KETERANGAN ---
+        // PRAKIRAAN PER JAM 7 HARI
         function renderHourlyTabs() {
             const tabsBox = document.getElementById('hourly-tabs');
             tabsBox.innerHTML = '';
@@ -669,7 +735,6 @@
             const container = document.getElementById('hourly-container');
             container.innerHTML = '';
             
-            // Setiap hari memiliki 24 jam. Index hari 0=kemarin, 1=hari ini, dst.
             const startHourIdx = dayIdx * 24;
             const endHourIdx = startHourIdx + 24;
 
@@ -691,63 +756,6 @@
                         <span class="hourly-temp">${temp}°C</span>
                         <span class="hourly-rain"><i class="fas fa-droplet"></i> ${rainProb}%</span>
                         <span class="hourly-desc">${wInfo.title}</span>
-                    </div>
-                `;
-            }
-        }
-
-        function renderDailyBars() {
-            const container = document.getElementById('daily-container');
-            container.innerHTML = '';
-            
-            const daily = globalWeatherData.daily;
-            let globalMin = Math.min(...daily.temperature_2m_min.slice(1,8));
-            let globalMax = Math.max(...daily.temperature_2m_max.slice(1,8));
-            let range = globalMax - globalMin;
-            if(range === 0) range = 1; 
-
-            const currentTemp = globalWeatherData.current.temperature_2m;
-            const days = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
-
-            for (let i = 1; i <= 7; i++) {
-                if(!daily.time[i]) break;
-
-                const dateObj = new Date(daily.time[i]);
-                let dayLabel = days[dateObj.getDay()];
-                if(i === 1) dayLabel = "Hari Ini";
-
-                const minT = Math.round(daily.temperature_2m_min[i]);
-                const maxT = Math.round(daily.temperature_2m_max[i]);
-                const rainProb = daily.precipitation_probability_max[i];
-                const wInfo = getWeatherDetails(daily.weather_code[i], true);
-
-                const leftPercent = ((minT - globalMin) / range) * 100;
-                const widthPercent = ((maxT - minT) / range) * 100;
-                
-                let dotHtml = '';
-                if(i === 1) { 
-                    let dotPos = ((currentTemp - globalMin) / range) * 100;
-                    if(dotPos < 0) dotPos = 0; if(dotPos > 100) dotPos = 100;
-                    dotHtml = `<div class="temp-dot" style="left: ${dotPos}%;"></div>`;
-                }
-
-                container.innerHTML += `
-                    <div class="daily-item">
-                        <div class="daily-day">${dayLabel}</div>
-                        <img class="daily-icon-img" src="${wInfo.icon}" alt="icon">
-                        
-                        <div style="display:flex; flex-direction:column; align-items:center;">
-                            <span style="font-size:0.7em; color: #3498db; font-weight:600;">${rainProb}%</span>
-                        </div>
-
-                        <div style="display:flex; align-items:center; width:100%; gap:5px;">
-                            <span class="temp-text">${minT}°</span>
-                            <div class="temp-bar-container">
-                                <div class="temp-bar-fill" style="left: ${leftPercent}%; width: ${widthPercent}%;"></div>
-                                ${dotHtml}
-                            </div>
-                            <span class="temp-text">${maxT}°</span>
-                        </div>
                     </div>
                 `;
             }
