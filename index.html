@@ -3,17 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cuaca Pro Ultimate</title>
+    <title>Prakiraan Cuaca ProUltime</title>
     
     <link rel="manifest" href="data:application/manifest+json;utf8,{%22name%22:%22Cuaca%20Premium%20ID%22,%22short_name%22:%22CuacaID%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%230f2027%22,%22theme_color%22:%22%234facfe%22}">
     <meta name="theme-color" content="#0f2027">
 
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Leaflet JS untuk Peta Hujan -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -34,6 +30,14 @@
         .bg-night-rain { background: linear-gradient(135deg, #000000, #434343); }
 
         .container { width: 100%; max-width: 600px; padding-bottom: 20px; position: relative; }
+
+        /* Judul Aplikasi */
+        .app-title {
+            text-align: center; font-size: 1.4em; font-weight: 700;
+            letter-spacing: 1.5px; margin-bottom: 20px;
+            color: #fff; text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            text-transform: uppercase;
+        }
 
         /* Glassmorphism */
         .glass-card {
@@ -80,14 +84,21 @@
             scrollbar-width: none;
         }
         .favorites-container::-webkit-scrollbar { display: none; }
+        
+        /* Favorite Chip with Delete Button */
         .fav-chip {
             background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.2);
-            padding: 8px 15px; border-radius: 20px; font-size: 0.8em; 
-            cursor: pointer; white-space: nowrap; transition: 0.3s;
-            display: flex; align-items: center; gap: 6px;
+            padding: 6px 6px 6px 15px; border-radius: 20px; font-size: 0.8em; 
+            white-space: nowrap; transition: 0.3s;
+            display: flex; align-items: center; gap: 10px;
         }
-        .fav-chip:hover { background: rgba(0,0,0,0.3); }
-        .fav-chip i { color: #f1c40f; }
+        .fav-chip-content { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+        .fav-chip-content i { color: #f1c40f; }
+        .fav-chip-delete { 
+            background: rgba(255,255,255,0.15); border-radius: 50%; width: 22px; height: 22px;
+            display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.3s;
+        }
+        .fav-chip-delete:hover { background: #e74c3c; color: white; }
 
         .suggestions-box {
             position: absolute; top: 110%; left: 0; width: calc(100% - 110px);
@@ -111,9 +122,11 @@
         .temp-desc-title { font-size: 1.3em; font-weight: 600; text-transform: capitalize; }
         .temp-subdesc { font-size: 0.85em; opacity: 0.85; margin-top: 4px; max-width: 80%; line-height: 1.3; font-weight: 400; }
         
-        .smart-insight {
+        /* Notifikasi 1 Jam Mendatang */
+        .next-hour-alert {
             background: rgba(0,0,0,0.15); padding: 10px 15px; border-radius: 20px;
             font-size: 0.85em; margin: 15px 0; display: inline-flex; align-items: center; gap: 8px;
+            transition: all 0.3s ease; border: 1px solid transparent;
         }
 
         /* Grid Detail */
@@ -199,11 +212,6 @@
         .hijri-date-text { font-size: 0.8em; font-weight: 600; color: #f1c40f; }
         .hijri-phase-name { font-size: 0.7em; opacity: 0.85; margin-top: 2px; }
 
-        /* Marker Map Custom */
-        .leaflet-container { font-family: 'Poppins', sans-serif; background: #2c3e50; }
-        .custom-weather-marker { background: transparent; border: none; }
-        .leaflet-control-attribution { color: #333 !important; }
-
         /* Footer Version Notice */
         .version-footer {
             text-align: center; font-size: 0.78em; opacity: 0.75;
@@ -233,6 +241,9 @@
 
     <div class="container hidden" id="main-content" onclick="closeSuggestions()">
         
+        <!-- Judul Aplikasi -->
+        <div class="app-title">PRAKIRAAN CUACA PROULTIME</div>
+
         <div id="pwa-install-banner" class="pwa-banner hidden">
             <div style="display:flex; align-items:center; gap: 12px;">
                 <i class="fas fa-mobile-screen-button" style="font-size: 1.8em; color: #f1c40f;"></i>
@@ -270,9 +281,10 @@
                 
                 <div class="temp-subdesc" id="current-subdesc">Memuat keterangan cuaca...</div>
                 
-                <div class="smart-insight">
-                    <i id="insight-icon" class="fas fa-lightbulb"></i>
-                    <span id="insight-text">Memuat analisis...</span>
+                <!-- Notifikasi 1 Jam Mendatang -->
+                <div class="next-hour-alert" id="next-hour-alert">
+                    <i id="next-hour-icon" class="fas fa-bell"></i>
+                    <span id="next-hour-text">Memuat perkiraan...</span>
                 </div>
             </div>
 
@@ -329,21 +341,8 @@
             <div class="hourly-scroll" id="hourly-container"></div>
         </div>
 
-        <!-- Peta Cuaca & Radar -->
-        <div class="glass-card">
-            <div class="section-title"><i class="fas fa-map-location-dot" style="color: #4facfe;"></i> Peta Radar Hujan Dunia</div>
-            <div id="weather-map" style="width: 100%; height: 300px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.2); z-index: 1; margin-bottom: 12px;"></div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.72em; opacity: 0.8; align-items: center;">
-                <span>Data Radar: RainViewer</span>
-                <span style="display:flex; align-items:center; gap:6px;">
-                    Intensitas Hujan: 
-                    <div style="background: linear-gradient(to right, #00d2ff, #00f, #0f0, #ff0, #f00, #ff00ff); width: 60px; height: 10px; border-radius: 5px;"></div>
-                </span>
-            </div>
-        </div>
-
         <div class="version-footer">
-            Cuaca Premium ID Ultimate • <strong>Update Version 1.0.2</strong>
+            Cuaca Premium ID Ultimate • <strong>Update Version 1.0.3</strong>
         </div>
 
     </div>
@@ -359,8 +358,6 @@
         let currentCityName = "";
 
         let deferredPrompt = null;
-        let weatherMap = null;
-        let mapMarker = null;
 
         // PWA Install Prompt
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -402,17 +399,34 @@
             favs.forEach(f => {
                 const chip = document.createElement('div');
                 chip.className = 'fav-chip';
-                chip.innerHTML = `<i class="fas fa-star"></i> ${f.name}`;
-                chip.onclick = () => {
-                    showLoading(`Memuat cuaca ${f.name}...`);
-                    currentKecName = f.name;
-                    currentCityName = f.city;
-                    document.getElementById('kecamatan-name').textContent = currentKecName;
-                    document.getElementById('city-name').textContent = currentCityName;
-                    getWeatherData(f.lat, f.lon);
-                };
+                chip.innerHTML = `
+                    <div class="fav-chip-content" onclick="loadFav('${f.lat}', '${f.lon}', '${f.name}', '${f.city}')">
+                        <i class="fas fa-star"></i> ${f.name}
+                    </div>
+                    <div class="fav-chip-delete" onclick="removeFavorite(event, '${f.id}')" title="Hapus">
+                        <i class="fas fa-times"></i>
+                    </div>
+                `;
                 container.appendChild(chip);
             });
+        }
+
+        function loadFav(lat, lon, name, city) {
+            showLoading(`Memuat cuaca ${name}...`);
+            currentKecName = name;
+            currentCityName = city;
+            document.getElementById('kecamatan-name').textContent = currentKecName;
+            document.getElementById('city-name').textContent = currentCityName;
+            getWeatherData(parseFloat(lat), parseFloat(lon));
+        }
+
+        function removeFavorite(e, locId) {
+            e.stopPropagation(); // Cegah terkliknya div container saat klik tombol X
+            let favs = JSON.parse(localStorage.getItem('weather_favs') || '[]');
+            favs = favs.filter(f => f.id !== locId);
+            localStorage.setItem('weather_favs', JSON.stringify(favs));
+            checkCurrentFavorite();
+            renderFavorites();
         }
 
         function toggleFavorite() {
@@ -468,10 +482,9 @@
             return { icon: "🌘", text: "Sabit Akhir" };
         }
 
-        // Konversi Tanggal Masehi ke Tanggal Hijriah (Fix Support HP Manual Array)
+        // Konversi Tanggal Masehi ke Tanggal Hijriah
         function getHijriDateString(date) {
             try {
-                // Memaksa output angka untuk di-mapping manual agar tidak terjadi masalah translate di browser hp
                 const formatter = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', { 
                     day: 'numeric', month: 'numeric', year: 'numeric' 
                 });
@@ -490,7 +503,6 @@
                 
                 return `${hDay} ${monthName} ${hYear} H`;
             } catch(e) {
-                // Fallback default
                 return new Intl.DateTimeFormat('id-ID-u-ca-islamic-umalqura', { day: 'numeric', month: 'long', year: 'numeric'}).format(date);
             }
         }
@@ -522,57 +534,6 @@
                 `;
                 container.appendChild(card);
             }
-        }
-
-        // Init Map Leaflet & Radar Hujan
-        function initMapLayer(lat, lon, temp, rainProb) {
-            if (!weatherMap) {
-                // Inisialisasi map
-                weatherMap = L.map('weather-map', { scrollWheelZoom: false }).setView([lat, lon], 10);
-                
-                // Tambahkan base tile dark theme
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; <a href="https://carto.com/">Carto</a> | OpenStreetMap',
-                    subdomains: 'abcd',
-                    maxZoom: 19
-                }).addTo(weatherMap);
-
-                // Tambahkan Radar Hujan dari API Rainviewer
-                fetch('https://api.rainviewer.com/public/weather-maps.json')
-                .then(res => res.json())
-                .then(data => {
-                    if (data.radar && data.radar.past && data.radar.past.length > 0) {
-                        const latestPath = data.radar.past[data.radar.past.length - 1].path;
-                        L.tileLayer(`https://tilecache.rainviewer.com${latestPath}/256/{z}/{x}/{y}/2/1_1.png`, {
-                            opacity: 0.6,
-                            zIndex: 10
-                        }).addTo(weatherMap);
-                    }
-                }).catch(e => console.log("Gagal memuat radar hujan"));
-
-            } else {
-                weatherMap.setView([lat, lon], 10);
-            }
-
-            // Buat HTML custom untuk marker (Indikator Suhu & Hujan)
-            if (mapMarker) weatherMap.removeLayer(mapMarker);
-            
-            const markerHtml = `
-                <div style="background: rgba(0,0,0,0.8); border: 2px solid #4facfe; border-radius: 12px; color: white; padding: 5px 12px; font-weight: bold; text-align: center; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
-                    <div style="font-size: 14px;">${temp}°C</div>
-                    <div style="font-size: 11px; color: #3498db; margin-top: 2px;"><i class="fas fa-droplet"></i> ${rainProb}%</div>
-                </div>
-            `;
-            
-            const customIcon = L.divIcon({
-                className: 'custom-weather-marker',
-                html: markerHtml,
-                iconSize: [60, 45],
-                iconAnchor: [30, 45]
-            });
-
-            mapMarker = L.marker([lat, lon], {icon: customIcon}).addTo(weatherMap);
-            setTimeout(() => { weatherMap.invalidateSize(); }, 500); // Pastikan maps termuat sempurna didalam div
         }
 
         // Keterangan Cuaca Detail
@@ -696,22 +657,31 @@
                 document.getElementById('current-subdesc').textContent = wInfo.desc;
                 document.getElementById('current-icon').src = wInfo.icon;
                 
-                // Smart Insight
+                // Fitur Baru: Notifikasi Cuaca 1 Jam Mendatang
                 const nowIso = cur.time.slice(0,14) + "00"; 
-                const currentIndex = globalWeatherData.hourly.time.findIndex(t => t.includes(nowIso));
-                if(currentIndex >= 24) {
-                    const tempNow = cur.temperature_2m;
-                    const tempYesterday = globalWeatherData.hourly.temperature_2m[currentIndex - 24];
-                    const diff = tempNow - tempYesterday;
-                    const insightIcon = document.getElementById('insight-icon');
+                const hrIndex = globalWeatherData.hourly.time.findIndex(t => t.includes(nowIso));
+                const alertBox = document.getElementById('next-hour-alert');
+                
+                if(hrIndex !== -1 && globalWeatherData.hourly.time[hrIndex + 1]) {
+                    const nextCode = globalWeatherData.hourly.weather_code[hrIndex + 1];
+                    const nextRain = globalWeatherData.hourly.precipitation_probability[hrIndex + 1];
+                    const nextW = getWeatherDetails(nextCode, globalWeatherData.hourly.is_day[hrIndex + 1] === 1);
                     
-                    if (Math.abs(diff) < 1) {
-                        document.getElementById('insight-text').textContent = "Suhu persis seperti kemarin.";
-                        insightIcon.className = "fas fa-equals";
+                    let alertMsg = `<strong>1 Jam Mendatang:</strong> ${nextW.title}`;
+                    if(nextRain > 0) alertMsg += ` (Hujan ${nextRain}%)`;
+                    
+                    document.getElementById('next-hour-text').innerHTML = alertMsg;
+                    
+                    // Ganti warna box sesuai status bahaya/hujan
+                    if (nextCode >= 50) { 
+                        alertBox.style.background = "rgba(231, 76, 60, 0.4)"; // Merah hujan/petir
+                        alertBox.style.border = "1px solid rgba(231, 76, 60, 0.6)";
+                    } else if (nextCode >= 3) {
+                        alertBox.style.background = "rgba(149, 165, 166, 0.4)"; // Abu mendung
+                        alertBox.style.border = "1px solid rgba(149, 165, 166, 0.6)";
                     } else {
-                        const status = diff > 0 ? "hangat" : "dingin";
-                        document.getElementById('insight-text').textContent = `Terasa ${Math.abs(diff).toFixed(1)}°C lebih ${status} dari kemarin.`;
-                        insightIcon.className = diff > 0 ? "fas fa-arrow-trend-up" : "fas fa-arrow-trend-down";
+                        alertBox.style.background = "rgba(0,0,0,0.15)";
+                        alertBox.style.border = "1px solid transparent";
                     }
                 }
 
@@ -719,22 +689,18 @@
                 document.getElementById('humidity').textContent = cur.relative_humidity_2m + "%";
                 document.getElementById('uv-index').textContent = daily.uv_index_max[todayIndex] || 0;
                 
-                const hrIndex = globalWeatherData.hourly.time.findIndex(t => new Date(t).getHours() === new Date().getHours() && new Date(t).getDate() === new Date().getDate());
                 const rainProb = hrIndex !== -1 ? globalWeatherData.hourly.precipitation_probability[hrIndex] : 0;
                 document.getElementById('rain-chance').textContent = rainProb + "%";
-
-                // Panggil Maps dengan marker di lokasi saat ini berserta suhu & cuaca
-                initMapLayer(lat, lon, Math.round(cur.temperature_2m), rainProb);
 
                 // Angin & Kompas
                 document.getElementById('wind-speed').textContent = Math.round(cur.wind_speed_10m);
                 document.getElementById('compass-needle').style.transform = `rotate(${cur.wind_direction_10m}deg)`;
 
-                // Animasi Busur Matahari & Bulan (Dibuat ke 2 kotak terpisah)
+                // Animasi Busur Matahari & Bulan
                 setupAstroWidget(daily.sunrise[todayIndex], daily.sunset[todayIndex]);
 
                 await getAQI(lat, lon);
-                renderHijriCalendar(); // Render Kalender Hijriah
+                renderHijriCalendar(); 
                 renderHourlyTabs();
                 renderHourlyForDay(selectedDayIndex); 
 
@@ -745,7 +711,7 @@
             }
         }
 
-        // ANIMASI MATAHARI & BULAN DIBUAT TERPISAH
+        // MATAHARI & BULAN
         function setupAstroWidget(sunriseISO, sunsetISO) {
             const now = new Date();
             
@@ -783,7 +749,6 @@
             if(nightPercent < 0) nightPercent = 0; if(nightPercent > 1) nightPercent = 1;
             const angleMoon = -90 + (nightPercent * 180);
 
-            // Perkiraan malam
             const nightLengthMs = (24 * 60 * 60 * 1000) - dayLengthMs;
             const nightHours = Math.floor(nightLengthMs / (1000 * 60 * 60));
             const nightMins = Math.floor((nightLengthMs % (1000 * 60 * 60)) / (1000 * 60));
@@ -827,7 +792,7 @@
             }
         }
 
-        // Tampilkan mulai dari jam sekarang ke depan jika hari ini
+        // Tampilkan mulai dari jam sekarang ke depan jika hari ini (Interval per 2 jam)
         function renderHourlyForDay(dayIdx) {
             const container = document.getElementById('hourly-container');
             container.innerHTML = '';
@@ -839,12 +804,12 @@
             const currentHour = now.getHours();
             const currentDate = now.getDate();
 
-            for (let i = startHourIdx; i < endHourIdx; i++) {
+            // Interval Loop ditambah jadi i += 2 untuk pergerakan per 2 Jam
+            for (let i = startHourIdx; i < endHourIdx; i += 2) {
                 if(!globalWeatherData.hourly.time[i]) break;
                 
                 const t = new Date(globalWeatherData.hourly.time[i]);
                 
-                // FITUR JAM SAAT INI HINGGA KE DEPAN
                 // Jika itu adalah hari ini, dan jamnya sudah berlalu, skip pembuatannya
                 if (dayIdx === 1) {
                     if (t.getDate() === currentDate && t.getHours() < currentHour) {
@@ -859,7 +824,6 @@
                 
                 let timeLabel = t.getHours().toString().padStart(2, '0') + ':00';
                 
-                // Kasih label khusus kalau itu tepat jam saat ini
                 if(dayIdx === 1 && t.getHours() === currentHour) timeLabel = "Skg";
 
                 container.innerHTML += `
@@ -905,6 +869,9 @@
                         getWeatherData(-6.2088, 106.8456);
                     }, { enableHighAccuracy: true }
                 );
+            } else {
+                getLocationName(-6.2088, 106.8456);
+                getWeatherData(-6.2088, 106.8456);
             }
         }
 
