@@ -10,6 +10,10 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Leaflet JS untuk Peta Hujan -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -55,7 +59,7 @@
         .pwa-close { background: transparent; border: none; color: #fff; font-size: 1.1em; cursor: pointer; opacity: 0.7; }
 
         /* Search Bar & Autocomplete */
-        .search-container { display: flex; gap: 10px; margin-bottom: 15px; position: relative; }
+        .search-container { display: flex; gap: 10px; margin-bottom: 15px; position: relative; z-index: 9999; }
         .search-input {
             flex: 1; padding: 12px 20px; border-radius: 20px;
             border: 1px solid rgba(255,255,255,0.3);
@@ -88,7 +92,7 @@
         .suggestions-box {
             position: absolute; top: 110%; left: 0; width: calc(100% - 110px);
             background: rgba(255,255,255,0.95); color: #333; border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 100; max-height: 250px; overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 10000; max-height: 250px; overflow-y: auto;
         }
         .suggestion-item { padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.9em; }
         .suggestion-item:last-child { border-bottom: none; }
@@ -127,6 +131,9 @@
 
         /* Widget Ekstra */
         .extra-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+        .astro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+        .full-span { grid-column: 1 / -1; }
+        
         .box-widget {
             background: rgba(0,0,0,0.1); padding: 15px; border-radius: 16px;
             display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
@@ -192,6 +199,11 @@
         .hijri-date-text { font-size: 0.8em; font-weight: 600; color: #f1c40f; }
         .hijri-phase-name { font-size: 0.7em; opacity: 0.85; margin-top: 2px; }
 
+        /* Marker Map Custom */
+        .leaflet-container { font-family: 'Poppins', sans-serif; background: #2c3e50; }
+        .custom-weather-marker { background: transparent; border: none; }
+        .leaflet-control-attribution { color: #333 !important; }
+
         /* Footer Version Notice */
         .version-footer {
             text-align: center; font-size: 0.78em; opacity: 0.75;
@@ -202,7 +214,7 @@
         #loading {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f2027; color: #fff;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 9999; text-align: center; padding: 20px;
+            z-index: 99999; text-align: center; padding: 20px;
         }
         .spinner {
             border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid #fff; border-radius: 50%;
@@ -283,17 +295,26 @@
                 </div>
             </div>
 
+            <!-- Widget Angin -->
             <div class="extra-grid">
-                <div class="box-widget">
-                    <div class="box-title"><i class="fas fa-wind"></i> Angin</div>
-                    <div class="compass">
-                        <div class="compass-needle" id="compass-needle"></div>
+                <div class="box-widget full-span" style="display:flex; flex-direction:row; justify-content:space-evenly; width: 100%;">
+                    <div style="display:flex; flex-direction:column; align-items:center;">
+                        <div class="box-title" style="text-align:center;"><i class="fas fa-wind"></i> Kecepatan Angin</div>
+                        <h4 style="margin-top:5px;"><span id="wind-speed">--</span> km/h</h4>
                     </div>
-                    <h4 style="margin-top: 5px;"><span id="wind-speed">--</span> km/h</h4>
+                    <div style="display:flex; flex-direction:column; align-items:center;">
+                        <div class="box-title" style="text-align:center;"><i class="far fa-compass"></i> Arah</div>
+                        <div class="compass" style="margin: 0;">
+                            <div class="compass-needle" id="compass-needle"></div>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="box-widget" id="astro-widget">
-                    </div>
+            </div>
+
+            <!-- Widget Terpisah Matahari dan Bulan -->
+            <div class="astro-grid">
+                <div class="box-widget" id="sun-widget"></div>
+                <div class="box-widget" id="moon-widget"></div>
             </div>
         </div>
 
@@ -308,8 +329,21 @@
             <div class="hourly-scroll" id="hourly-container"></div>
         </div>
 
+        <!-- Peta Cuaca & Radar -->
+        <div class="glass-card">
+            <div class="section-title"><i class="fas fa-map-location-dot" style="color: #4facfe;"></i> Peta Radar Hujan Dunia</div>
+            <div id="weather-map" style="width: 100%; height: 300px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.2); z-index: 1; margin-bottom: 12px;"></div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.72em; opacity: 0.8; align-items: center;">
+                <span>Data Radar: RainViewer</span>
+                <span style="display:flex; align-items:center; gap:6px;">
+                    Intensitas Hujan: 
+                    <div style="background: linear-gradient(to right, #00d2ff, #00f, #0f0, #ff0, #f00, #ff00ff); width: 60px; height: 10px; border-radius: 5px;"></div>
+                </span>
+            </div>
+        </div>
+
         <div class="version-footer">
-            Cuaca Premium ID Ultimate • <strong>Update Version 1.0.1</strong>
+            Cuaca Premium ID Ultimate • <strong>Update Version 1.0.2</strong>
         </div>
 
     </div>
@@ -325,6 +359,8 @@
         let currentCityName = "";
 
         let deferredPrompt = null;
+        let weatherMap = null;
+        let mapMarker = null;
 
         // PWA Install Prompt
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -415,7 +451,7 @@
             }
         }
 
-        // Kalkulasi Fase Bulan berdasarkan Tanggal
+        // Kalkulasi Fase Bulan
         function getMoonPhaseForDate(date) {
             const lp = 2551442.8; 
             const now = date.getTime() / 1000;
@@ -425,28 +461,41 @@
             if (phase < 0.03 || phase > 0.97) return { icon: "🌑", text: "Bulan Baru" };
             if (phase < 0.22) return { icon: "🌒", text: "Sabit Awal" };
             if (phase < 0.28) return { icon: "🌓", text: "Separuh Awal" };
-            if (phase < 0.47) return { icon: "m🌔", text: "Cembung Awal" };
+            if (phase < 0.47) return { icon: "🌔", text: "Cembung Awal" };
             if (phase < 0.53) return { icon: "🌕", text: "Purnama" };
             if (phase < 0.72) return { icon: "🌖", text: "Cembung Akhir" };
             if (phase < 0.78) return { icon: "🌗", text: "Separuh Akhir" };
             return { icon: "🌘", text: "Sabit Akhir" };
         }
 
-        // Konversi Tanggal Masehi ke Tanggal Hijriah
+        // Konversi Tanggal Masehi ke Tanggal Hijriah (Fix Support HP Manual Array)
         function getHijriDateString(date) {
             try {
-                const formatter = new Intl.DateTimeFormat('id-ID-u-ca-islamic-umalqura', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
+                // Memaksa output angka untuk di-mapping manual agar tidak terjadi masalah translate di browser hp
+                const formatter = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', { 
+                    day: 'numeric', month: 'numeric', year: 'numeric' 
                 });
-                return formatter.format(date);
+                const parts = formatter.formatToParts(date);
+                
+                let hDay = "", hMonth = "", hYear = "";
+                parts.forEach(p => {
+                    if (p.type === 'day') hDay = p.value;
+                    if (p.type === 'month') hMonth = p.value;
+                    if (p.type === 'year') hYear = p.value;
+                });
+                
+                const hijriMonths = ["Muharram", "Safar", "Rabi'ul Awal", "Rabi'ul Akhir", "Jumadil Awal", "Jumadil Akhir", "Rajab", "Sya'ban", "Ramadhan", "Syawal", "Dzulqa'dah", "Dzulhijjah"];
+                const monthIndex = parseInt(hMonth) - 1;
+                const monthName = hijriMonths[monthIndex] || `Bulan ke-${hMonth}`;
+                
+                return `${hDay} ${monthName} ${hYear} H`;
             } catch(e) {
-                return "";
+                // Fallback default
+                return new Intl.DateTimeFormat('id-ID-u-ca-islamic-umalqura', { day: 'numeric', month: 'long', year: 'numeric'}).format(date);
             }
         }
 
-        // Render Kalender Hijriah & Fase Bulan
+        // Render Kalender Hijriah
         function renderHijriCalendar() {
             const container = document.getElementById('hijri-calendar-container');
             container.innerHTML = '';
@@ -454,7 +503,6 @@
             const today = new Date();
             const daysShort = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
-            // Tampilkan 30 hari dimulai dari hari ini
             for (let i = 0; i < 30; i++) {
                 const targetDate = new Date();
                 targetDate.setDate(today.getDate() + i);
@@ -474,6 +522,57 @@
                 `;
                 container.appendChild(card);
             }
+        }
+
+        // Init Map Leaflet & Radar Hujan
+        function initMapLayer(lat, lon, temp, rainProb) {
+            if (!weatherMap) {
+                // Inisialisasi map
+                weatherMap = L.map('weather-map', { scrollWheelZoom: false }).setView([lat, lon], 10);
+                
+                // Tambahkan base tile dark theme
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; <a href="https://carto.com/">Carto</a> | OpenStreetMap',
+                    subdomains: 'abcd',
+                    maxZoom: 19
+                }).addTo(weatherMap);
+
+                // Tambahkan Radar Hujan dari API Rainviewer
+                fetch('https://api.rainviewer.com/public/weather-maps.json')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.radar && data.radar.past && data.radar.past.length > 0) {
+                        const latestPath = data.radar.past[data.radar.past.length - 1].path;
+                        L.tileLayer(`https://tilecache.rainviewer.com${latestPath}/256/{z}/{x}/{y}/2/1_1.png`, {
+                            opacity: 0.6,
+                            zIndex: 10
+                        }).addTo(weatherMap);
+                    }
+                }).catch(e => console.log("Gagal memuat radar hujan"));
+
+            } else {
+                weatherMap.setView([lat, lon], 10);
+            }
+
+            // Buat HTML custom untuk marker (Indikator Suhu & Hujan)
+            if (mapMarker) weatherMap.removeLayer(mapMarker);
+            
+            const markerHtml = `
+                <div style="background: rgba(0,0,0,0.8); border: 2px solid #4facfe; border-radius: 12px; color: white; padding: 5px 12px; font-weight: bold; text-align: center; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+                    <div style="font-size: 14px;">${temp}°C</div>
+                    <div style="font-size: 11px; color: #3498db; margin-top: 2px;"><i class="fas fa-droplet"></i> ${rainProb}%</div>
+                </div>
+            `;
+            
+            const customIcon = L.divIcon({
+                className: 'custom-weather-marker',
+                html: markerHtml,
+                iconSize: [60, 45],
+                iconAnchor: [30, 45]
+            });
+
+            mapMarker = L.marker([lat, lon], {icon: customIcon}).addTo(weatherMap);
+            setTimeout(() => { weatherMap.invalidateSize(); }, 500); // Pastikan maps termuat sempurna didalam div
         }
 
         // Keterangan Cuaca Detail
@@ -621,14 +720,18 @@
                 document.getElementById('uv-index').textContent = daily.uv_index_max[todayIndex] || 0;
                 
                 const hrIndex = globalWeatherData.hourly.time.findIndex(t => new Date(t).getHours() === new Date().getHours() && new Date(t).getDate() === new Date().getDate());
-                document.getElementById('rain-chance').textContent = (hrIndex !== -1 ? globalWeatherData.hourly.precipitation_probability[hrIndex] : 0) + "%";
+                const rainProb = hrIndex !== -1 ? globalWeatherData.hourly.precipitation_probability[hrIndex] : 0;
+                document.getElementById('rain-chance').textContent = rainProb + "%";
+
+                // Panggil Maps dengan marker di lokasi saat ini berserta suhu & cuaca
+                initMapLayer(lat, lon, Math.round(cur.temperature_2m), rainProb);
 
                 // Angin & Kompas
                 document.getElementById('wind-speed').textContent = Math.round(cur.wind_speed_10m);
                 document.getElementById('compass-needle').style.transform = `rotate(${cur.wind_direction_10m}deg)`;
 
-                // Animasi Busur Matahari / Bulan & Panjang Hari/Malam
-                setupAstroWidget(daily.sunrise[todayIndex], daily.sunset[todayIndex], cur.is_day);
+                // Animasi Busur Matahari & Bulan (Dibuat ke 2 kotak terpisah)
+                setupAstroWidget(daily.sunrise[todayIndex], daily.sunset[todayIndex]);
 
                 await getAQI(lat, lon);
                 renderHijriCalendar(); // Render Kalender Hijriah
@@ -642,67 +745,60 @@
             }
         }
 
-        // ANIMASI MATAHARI & BULAN + DURASI PANJANG HARI & MALAM
-        function setupAstroWidget(sunriseISO, sunsetISO, isDay) {
-            const container = document.getElementById('astro-widget');
+        // ANIMASI MATAHARI & BULAN DIBUAT TERPISAH
+        function setupAstroWidget(sunriseISO, sunsetISO) {
+            const now = new Date();
             
+            // 1. KOTAK MATAHARI
             const sRise = new Date(sunriseISO);
             const sSet = new Date(sunsetISO);
-            const now = new Date();
-
-            // Hitung Panjang Siang (Hari) & Malam
+            
             const dayLengthMs = sSet - sRise;
-            const nightLengthMs = (24 * 60 * 60 * 1000) - dayLengthMs;
+            const passedMs = now - sRise;
+            let percentSun = passedMs / dayLengthMs;
+            if(percentSun < 0) percentSun = 0; if(percentSun > 1) percentSun = 1;
+            const angleSun = -90 + (percentSun * 180);
 
             const dayHours = Math.floor(dayLengthMs / (1000 * 60 * 60));
             const dayMins = Math.floor((dayLengthMs % (1000 * 60 * 60)) / (1000 * 60));
-
-            const nightHours = Math.floor(nightLengthMs / (1000 * 60 * 60));
-            const nightMins = Math.floor((nightLengthMs % (1000 * 60 * 60)) / (1000 * 60));
-
             const tRiseStr = sRise.getHours().toString().padStart(2,'0') + ":" + sRise.getMinutes().toString().padStart(2,'0');
             const tSetStr = sSet.getHours().toString().padStart(2,'0') + ":" + sSet.getMinutes().toString().padStart(2,'0');
 
-            if (isDay === 1) {
-                // Siang: Animasi Lintasan Matahari
-                const totalDayMs = sSet - sRise;
-                const passedMs = now - sRise;
-                let percent = passedMs / totalDayMs;
-                if(percent < 0) percent = 0; if(percent > 1) percent = 1;
-                
-                const angle = -90 + (percent * 180);
-
-                container.innerHTML = `
-                    <div class="box-title"><i class="fas fa-sun"></i> Matahari Terbit/Tenggelam</div>
-                    <div class="astro-arc-container">
-                        <div class="astro-arc"></div>
-                        <div class="astro-pivot" style="transform: rotate(${angle}deg);">
-                            <i class="fas fa-sun astro-icon" style="color: #f1c40f;"></i>
-                        </div>
+            document.getElementById('sun-widget').innerHTML = `
+                <div class="box-title"><i class="fas fa-sun" style="color:#f1c40f;"></i> Matahari</div>
+                <div class="astro-arc-container">
+                    <div class="astro-arc"></div>
+                    <div class="astro-pivot" style="transform: rotate(${angleSun}deg);">
+                        <i class="fas fa-sun astro-icon" style="color: #f1c40f;"></i>
                     </div>
-                    <div class="astro-times"><span><i class="fas fa-arrow-up"></i> ${tRiseStr}</span><span><i class="fas fa-arrow-down"></i> ${tSetStr}</span></div>
-                    <div class="day-length-info"><i class="fas fa-clock"></i> Siang: ${dayHours}j ${dayMins}m</div>
-                `;
-            } else {
-                // Malam: Animasi Lintasan Bulan & Fase Bulan
-                const moon = getMoonPhaseForDate(now);
-                const hours = now.getHours();
-                let nightPercent = ((hours >= 18 ? hours - 18 : hours + 6)) / 12;
-                if(nightPercent < 0) nightPercent = 0; if(nightPercent > 1) nightPercent = 1;
-                const angle = -90 + (nightPercent * 180);
+                </div>
+                <div class="astro-times"><span>${tRiseStr}</span><span>${tSetStr}</span></div>
+                <div class="day-length-info">Siang: ${dayHours}j ${dayMins}m</div>
+            `;
 
-                container.innerHTML = `
-                    <div class="box-title"><i class="fas fa-moon"></i> Bulan (${moon.text})</div>
-                    <div class="astro-arc-container">
-                        <div class="astro-arc"></div>
-                        <div class="astro-pivot" style="transform: rotate(${angle}deg);">
-                            <span class="astro-icon">${moon.icon}</span>
-                        </div>
+            // 2. KOTAK BULAN
+            const moon = getMoonPhaseForDate(now);
+            const hours = now.getHours();
+            let nightPercent = ((hours >= 18 ? hours - 18 : hours + 6)) / 12;
+            if(nightPercent < 0) nightPercent = 0; if(nightPercent > 1) nightPercent = 1;
+            const angleMoon = -90 + (nightPercent * 180);
+
+            // Perkiraan malam
+            const nightLengthMs = (24 * 60 * 60 * 1000) - dayLengthMs;
+            const nightHours = Math.floor(nightLengthMs / (1000 * 60 * 60));
+            const nightMins = Math.floor((nightLengthMs % (1000 * 60 * 60)) / (1000 * 60));
+
+            document.getElementById('moon-widget').innerHTML = `
+                <div class="box-title"><i class="fas fa-moon"></i> Bulan</div>
+                <div class="astro-arc-container">
+                    <div class="astro-arc"></div>
+                    <div class="astro-pivot" style="transform: rotate(${angleMoon}deg);">
+                        <span class="astro-icon">${moon.icon}</span>
                     </div>
-                    <div class="astro-times"><span>18:00</span><span>06:00</span></div>
-                    <div class="day-length-info"><i class="fas fa-moon"></i> Malam: ${nightHours}j ${nightMins}m</div>
-                `;
-            }
+                </div>
+                <div class="astro-times"><span>18:00</span><span>06:00</span></div>
+                <div class="day-length-info">${moon.text}</div>
+            `;
         }
 
         // PRAKIRAAN PER JAM 7 HARI
@@ -731,6 +827,7 @@
             }
         }
 
+        // Tampilkan mulai dari jam sekarang ke depan jika hari ini
         function renderHourlyForDay(dayIdx) {
             const container = document.getElementById('hourly-container');
             container.innerHTML = '';
@@ -738,16 +835,32 @@
             const startHourIdx = dayIdx * 24;
             const endHourIdx = startHourIdx + 24;
 
+            const now = new Date();
+            const currentHour = now.getHours();
+            const currentDate = now.getDate();
+
             for (let i = startHourIdx; i < endHourIdx; i++) {
                 if(!globalWeatherData.hourly.time[i]) break;
                 
                 const t = new Date(globalWeatherData.hourly.time[i]);
+                
+                // FITUR JAM SAAT INI HINGGA KE DEPAN
+                // Jika itu adalah hari ini, dan jamnya sudah berlalu, skip pembuatannya
+                if (dayIdx === 1) {
+                    if (t.getDate() === currentDate && t.getHours() < currentHour) {
+                        continue;
+                    }
+                }
+
                 const temp = Math.round(globalWeatherData.hourly.temperature_2m[i]);
                 const rainProb = globalWeatherData.hourly.precipitation_probability[i];
                 const isDay = globalWeatherData.hourly.is_day[i] === 1;
                 const wInfo = getWeatherDetails(globalWeatherData.hourly.weather_code[i], isDay);
                 
                 let timeLabel = t.getHours().toString().padStart(2, '0') + ':00';
+                
+                // Kasih label khusus kalau itu tepat jam saat ini
+                if(dayIdx === 1 && t.getHours() === currentHour) timeLabel = "Skg";
 
                 container.innerHTML += `
                     <div class="hourly-item">
