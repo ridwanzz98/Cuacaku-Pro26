@@ -1,833 +1,640 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CuacaNusantara - Prakiraan Cuaca Indonesia Presisi</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chart.js for smooth hourly temperature graphs -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LuxWeather Indonesia — Cuaca Real-Time Presisi</title>
+<!-- Leaflet CSS for Location Map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<!-- Font Awesome Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            50: '#eff6ff',
-                            100: '#dbeafe',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            700: '#1d4ed8',
-                            900: '#1e3a8a',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+<style>
+:root {
+  --bg: #eef4fb;
+  --bg2: #f8fbff;
+  --card: rgba(255, 255, 255, 0.82);
+  --text: #132238;
+  --muted: #66758b;
+  --line: rgba(19, 34, 56, 0.09);
+  --accent: #1677ff;
+  --gold: #b8892d;
+  --shadow: 0 18px 50px rgba(31, 61, 105, 0.12);
+}
 
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-            color: #f8fafc;
-            min-height: 100vh;
-        }
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; font-family: 'Inter', system-ui, -apple-system, sans-serif; color: var(--text); }
 
-        .glass-card {
-            background: rgba(30, 41, 59, 0.65);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
+body {
+  background: radial-gradient(circle at 15% 0%, #d8eaff 0, transparent 32%), linear-gradient(145deg, var(--bg), var(--bg2));
+  transition: background 0.3s ease, color 0.3s ease;
+}
 
-        .glass-card-hover:hover {
-            background: rgba(30, 41, 59, 0.8);
-            border-color: rgba(59, 130, 246, 0.4);
-            transform: translateY(-2px);
-            transition: all 0.2s ease-in-out;
-        }
+body.dark {
+  --bg: #07111f;
+  --bg2: #0d1726;
+  --card: rgba(17, 29, 47, 0.85);
+  --text: #edf4ff;
+  --muted: #9aaac0;
+  --line: rgba(255, 255, 255, 0.09);
+  --shadow: 0 20px 55px rgba(0, 0, 0, 0.35);
+  background: radial-gradient(circle at 80% 0%, #17365d 0, transparent 35%), linear-gradient(145deg, #07111f, #0c1625);
+}
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            height: 6px;
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(15, 23, 42, 0.5);
-            border-radius: 8px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(59, 130, 246, 0.5);
-            border-radius: 8px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(59, 130, 246, 0.8);
-        }
+.wrap { max-width: 1050px; margin: auto; padding: 22px 16px 38px; }
 
-        /* Pulse loading animation */
-        @keyframes pulseGlow {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 1; }
-        }
-        .pulse-glow {
-            animation: pulseGlow 2s infinite ease-in-out;
-        }
-    </style>
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo { width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center; background: linear-gradient(135deg, #1677ff, #72b5ff); color: white; font-size: 24px; box-shadow: 0 10px 25px rgba(22, 119, 255, 0.3); }
+h1 { font-size: 23px; margin: 0; letter-spacing: -0.5px; }
+.sub { font-size: 12px; color: var(--muted); margin-top: 3px; display: flex; align-items: center; gap: 4px; }
+
+.actions { display: flex; gap: 8px; }
+.btn { border: 1px solid var(--line); background: var(--card); color: var(--text); border-radius: 14px; padding: 10px 14px; font-weight: 700; cursor: pointer; backdrop-filter: blur(12px); display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
+.btn:hover { border-color: var(--accent); transform: translateY(-1px); }
+.btn.primary { background: linear-gradient(135deg, #1677ff, #4b9bff); color: white; border: 0; }
+
+.searchbox { position: relative; margin-bottom: 18px; }
+.searchrow { display: flex; gap: 8px; }
+.searchrow input { flex: 1; border: 1px solid var(--line); background: var(--card); color: var(--text); padding: 14px 18px; border-radius: 16px; outline: none; font-size: 15px; box-shadow: var(--shadow); backdrop-filter: blur(12px); transition: border-color 0.2s; }
+.searchrow input:focus { border-color: var(--accent); }
+
+.results { position: absolute; z-index: 1000; left: 0; right: 0; top: 58px; background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); display: none; max-height: 280px; overflow-y: auto; }
+.result { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid var(--line); transition: background 0.15s; }
+.result:last-child { border-bottom: none; }
+.result:hover { background: rgba(22, 119, 255, 0.12); }
+.result b { display: block; font-size: 14px; }
+.result small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+
+.card { background: var(--card); backdrop-filter: blur(18px); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
+
+.hero { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 16px; }
+.current { text-align: center; padding: 24px 18px; }
+.place { font-size: 22px; font-weight: 850; line-height: 1.2; }
+.time { font-size: 12px; color: var(--muted); margin: 6px 0 14px; }
+.weathericon { font-size: 64px; margin: 8px 0; }
+.temp { font-size: 60px; font-weight: 850; letter-spacing: -3px; }
+.desc { font-size: 17px; font-weight: 750; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 20px; }
+.stat { background: rgba(255, 255, 255, 0.2); border: 1px solid var(--line); border-radius: 16px; padding: 11px; text-align: center; }
+body.dark .stat { background: rgba(0, 0, 0, 0.2); }
+.stat b { display: block; font-size: 15px; }
+.stat span { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+.sectiontitle { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.sectiontitle h2 { font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px; }
+.badge { font-size: 11px; color: var(--accent); font-weight: 800; background: rgba(22, 119, 255, 0.1); padding: 3px 8px; border-radius: 8px; }
+
+.hourly { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+.hour { min-width: 80px; text-align: center; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.15); border-radius: 18px; padding: 12px 8px; flex-shrink: 0; }
+body.dark .hour { background: rgba(0, 0, 0, 0.2); }
+.hour small { color: var(--muted); font-size: 11px; display: block; }
+.hour .hi { font-size: 26px; margin: 6px 0; }
+.rain { color: var(--accent); font-weight: 800; font-size: 11px; }
+
+.daygrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.day { text-align: center; padding: 12px 6px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255, 255, 255, 0.15); }
+body.dark .day { background: rgba(0, 0, 0, 0.2); }
+.day small { color: var(--muted); font-size: 11px; }
+.day .di { font-size: 24px; margin: 6px 0; }
+.day b { font-size: 13px; }
+
+#map { height: 320px; border-radius: 18px; overflow: hidden; }
+.mapnote { font-size: 11px; color: var(--muted); margin-top: 9px; }
+
+.loading { text-align: center; color: var(--muted); padding: 30px; font-size: 15px; }
+.error-box { background: rgba(220, 38, 38, 0.1); border: 1px solid rgba(220, 38, 38, 0.3); color: #ef4444; padding: 12px 16px; border-radius: 14px; font-size: 13px; margin-bottom: 15px; display: none; align-items: center; justify-content: space-between; }
+
+.sunbox { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.sunitem { padding: 16px; border-radius: 18px; background: linear-gradient(135deg, #fff4d8, #ffe8ad); color: #513b12; }
+.sunitem:last-child { background: linear-gradient(135deg, #e9edff, #d8ddff); color: #252d5d; }
+.sunitem b { display: block; font-size: 20px; margin-top: 4px; }
+.sunitem span { font-size: 11px; opacity: 0.8; font-weight: 600; }
+
+.alert { border: 1px solid #ffb24a; background: linear-gradient(135deg, rgba(255, 248, 232, 0.9), rgba(255, 240, 207, 0.9)); color: #69460b; }
+body.dark .alert { background: linear-gradient(135deg, rgba(74, 52, 10, 0.8), rgba(92, 60, 12, 0.8)); color: #ffd699; border-color: #b37400; }
+.alert.safe { border-color: #78c89a; background: linear-gradient(135deg, rgba(239, 252, 244, 0.9), rgba(224, 247, 234, 0.9)); color: #185b38; }
+body.dark .alert.safe { background: linear-gradient(135deg, rgba(16, 61, 38, 0.8), rgba(21, 79, 49, 0.8)); color: #a3e6c2; border-color: #278a54; }
+.alert h2 { margin: 0 0 6px; font-size: 16px; }
+.alert p { margin: 0; font-size: 13px; line-height: 1.5; }
+
+.footer { text-align: center; color: var(--muted); font-size: 11px; margin-top: 20px; }
+body.dark .leaflet-tile { filter: brightness(0.75) contrast(1.05) saturate(0.8); }
+
+@media(max-width: 768px) {
+  .hero { grid-template-columns: 1fr; }
+  .daygrid { grid-template-columns: repeat(4, 1fr); }
+  #map { height: 260px; }
+}
+@media(max-width: 480px) {
+  .actions .label { display: none; }
+  .temp { font-size: 52px; }
+  .daygrid { grid-template-columns: repeat(3, 1fr); }
+  .searchrow { gap: 6px; }
+  .searchrow button { padding: 10px 12px; }
+}
+</style>
 </head>
-<body class="p-3 sm:p-6 md:p-8 text-slate-100 flex flex-col items-center">
+<body>
 
-    <div class="w-full max-w-6xl space-y-6">
-
-        <!-- Top Header Navigation & Search -->
-        <header class="glass-card rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4">
-            
-            <!-- Logo & Title -->
-            <div class="flex items-center gap-3 w-full md:w-auto">
-                <div class="w-11 h-11 rounded-xl bg-blue-600/30 border border-blue-400/30 flex items-center justify-center text-blue-400 text-2xl shadow-lg">
-                    <i class="fa-solid font-bold fa-cloud-sun-rain"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-white via-blue-100 to-blue-400 bg-clip-text text-transparent">
-                        CuacaNusantara
-                    </h1>
-                    <p class="text-xs text-slate-400 flex items-center gap-1">
-                        <i class="fa-solid fa-flag text-red-500 text-[10px]"></i> Indonesia Precise Weather
-                    </p>
-                </div>
-            </div>
-
-            <!-- Search Bar + Lock GPS Button -->
-            <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto relative">
-                
-                <!-- Kecamatan Search Input -->
-                <div class="relative w-full sm:w-80 md:w-96">
-                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                        <i class="fa-solid fa-magnifying-glass text-sm"></i>
-                    </div>
-                    <input 
-                        type="text" 
-                        id="searchInput"
-                        placeholder="Cari Desa, Kecamatan, Kota/Kab..." 
-                        autocomplete="off"
-                        class="w-full pl-10 pr-9 py-2.5 bg-slate-900/80 border border-slate-700/80 rounded-xl text-sm placeholder-slate-400 text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all"
-                    >
-                    <button id="clearSearchBtn" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-
-                    <!-- Auto-complete Search Results Dropdown -->
-                    <div id="searchResults" class="hidden absolute z-50 left-0 right-0 mt-2 bg-slate-900/95 border border-slate-700 rounded-xl shadow-2xl overflow-hidden max-h-72 overflow-y-auto backdrop-blur-md">
-                        <!-- Items rendered via JS -->
-                    </div>
-                </div>
-
-                <!-- GPS Lock Button -->
-                <button 
-                    id="gpsBtn"
-                    onclick="lockGPSLocation()"
-                    title="Kunci GPS Perangkat Saya"
-                    class="w-full sm:w-auto px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
-                >
-                    <i class="fa-solid fa-location-crosshairs text-base"></i>
-                    <span>Kunci GPS</span>
-                </button>
-            </div>
-        </header>
-
-        <!-- Alert Notification Box for User Feedback -->
-        <div id="statusAlert" class="hidden rounded-xl p-4 text-sm flex items-start justify-between border shadow-lg transition-all">
-            <div class="flex items-center gap-3">
-                <i id="statusIcon" class="fa-solid fa-circle-info text-lg"></i>
-                <span id="statusMessage">Memuat...</span>
-            </div>
-            <button onclick="hideStatusAlert()" class="text-slate-400 hover:text-white">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-
-        <!-- Main Dashboard View Grid -->
-        <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-            <!-- Hero Section: Location & Primary Temperature -->
-            <div class="lg:col-span-2 glass-card rounded-3xl p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden shadow-2xl">
-                <!-- Decorative Blur Glow -->
-                <div class="absolute -top-16 -right-16 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
-
-                <div>
-                    <!-- Location Breadcrumb -->
-                    <div class="flex flex-wrap items-center gap-2 text-xs font-medium text-blue-400 mb-2">
-                        <span class="px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center gap-1.5" id="gpsBadge">
-                            <i class="fa-solid fa-satellite text-blue-400"></i> GPS Terkunci
-                        </span>
-                        <span id="updateTime" class="text-slate-400">Diperbarui: -</span>
-                    </div>
-
-                    <!-- Location Hierarchy Display -->
-                    <h2 id="locationName" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
-                        Mendeteksi Lokasi GPS...
-                    </h2>
-                    <p id="locationDetail" class="text-sm text-slate-300 mt-1">
-                        Memuat data geolokasi presisi Kecamatan...
-                    </p>
-                </div>
-
-                <!-- Weather Big Display -->
-                <div class="my-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                    <div class="flex items-center gap-4">
-                        <div id="heroIcon" class="text-6xl sm:text-7xl text-yellow-400 filter drop-shadow-lg">
-                            <i class="fa-solid fa-spinner fa-spin text-slate-500"></i>
-                        </div>
-                        <div>
-                            <div class="flex items-baseline">
-                                <span id="heroTemp" class="text-5xl sm:text-7xl font-black text-white tracking-tighter">--</span>
-                                <span class="text-3xl font-light text-blue-400 ml-1">°C</span>
-                            </div>
-                            <p id="heroCondition" class="text-lg font-semibold text-slate-200 mt-0.5">Memuat Cuaca...</p>
-                        </div>
-                    </div>
-
-                    <div class="glass-card rounded-2xl p-4 border border-slate-700/50 w-full sm:w-auto min-w-[180px] space-y-2">
-                        <div class="flex justify-between items-center text-xs text-slate-300">
-                            <span>Sensasi Suhu</span>
-                            <span id="heroApparentTemp" class="font-bold text-white">--°C</span>
-                        </div>
-                        <div class="flex justify-between items-center text-xs text-slate-300">
-                            <span>Suhu Min / Maks</span>
-                            <span id="heroMinMaxTemp" class="font-bold text-white">--° / --°</span>
-                        </div>
-                        <div class="flex justify-between items-center text-xs text-slate-300">
-                            <span>Peluang Hujan</span>
-                            <span id="heroRainChance" class="font-bold text-blue-400">--%</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Quick Metrics Cards Grid -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-slate-700/50">
-                    <div class="glass-card p-3 rounded-xl flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center text-lg">
-                            <i class="fa-solid fa-droplet"></i>
-                        </div>
-                        <div>
-                            <p class="text-[11px] text-slate-400 uppercase font-medium">Kelembapan</p>
-                            <p id="metricHumidity" class="text-base font-bold text-white">--%</p>
-                        </div>
-                    </div>
-
-                    <div class="glass-card p-3 rounded-xl flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-lg bg-teal-500/20 text-teal-400 flex items-center justify-center text-lg">
-                            <i class="fa-solid fa-wind"></i>
-                        </div>
-                        <div>
-                            <p class="text-[11px] text-slate-400 uppercase font-medium">Angin</p>
-                            <p id="metricWind" class="text-base font-bold text-white">-- km/jam</p>
-                        </div>
-                    </div>
-
-                    <div class="glass-card p-3 rounded-xl flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg">
-                            <i class="fa-solid fa-sun"></i>
-                        </div>
-                        <div>
-                            <p class="text-[11px] text-slate-400 uppercase font-medium">Indeks UV</p>
-                            <p id="metricUV" class="text-base font-bold text-white">--</p>
-                        </div>
-                    </div>
-
-                    <div class="glass-card p-3 rounded-xl flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center text-lg">
-                            <i class="fa-solid fa-gauge-high"></i>
-                        </div>
-                        <div>
-                            <p class="text-[11px] text-slate-400 uppercase font-medium">Tekanan Udara</p>
-                            <p id="metricPressure" class="text-base font-bold text-white">-- hPa</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 7-Day Forecast Sidebar Card -->
-            <div class="glass-card rounded-3xl p-6 shadow-2xl flex flex-col justify-between">
-                <div>
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                            <i class="fa-solid fa-calendar-week text-blue-400"></i> Prakiraan 7 Hari
-                        </h3>
-                        <span class="text-xs text-slate-400">Mingguan</span>
-                    </div>
-
-                    <div id="dailyForecastContainer" class="space-y-3">
-                        <!-- Daily Rows rendered via JS -->
-                        <div class="text-center py-12 text-slate-400 text-sm">
-                            <i class="fa-solid fa-spinner fa-spin text-2xl text-blue-500 mb-2"></i>
-                            <p>Memuat prakiraan 7 hari...</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-4 pt-3 border-t border-slate-700/50 text-center">
-                    <p class="text-[11px] text-slate-400">Data bersumber dari BMKG / Open-Meteo API</p>
-                </div>
-            </div>
-
-        </main>
-
-        <!-- Hourly Forecast & Temperature Graph Section -->
-        <section class="glass-card rounded-3xl p-6 shadow-2xl">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
-                <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-clock text-blue-400"></i> Prakiraan Jam-jaman (24 Jam)
-                </h3>
-                <span class="text-xs text-slate-400">Tren perubahan suhu & potensi hujan</span>
-            </div>
-
-            <!-- Temperature Line Chart -->
-            <div class="w-full h-48 sm:h-56 mb-6">
-                <canvas id="hourlyChart"></canvas>
-            </div>
-
-            <!-- Scrollable Hourly Forecast Cards -->
-            <div id="hourlyCardsContainer" class="flex gap-3 overflow-x-auto pb-2 pt-1">
-                <!-- Cards rendered via JS -->
-                <div class="text-center py-6 text-slate-400 text-sm w-full">
-                    Memuat prakiraan per jam...
-                </div>
-            </div>
-        </section>
-
-        <!-- Footer Footer Info -->
-        <footer class="text-center py-4 text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-slate-800">
-            <p>© 2026 CuacaNusantara — Deteksi lokasi presisi Kecamatan Seluruh Indonesia</p>
-            <div class="flex gap-4">
-                <span class="hover:text-slate-300 transition-colors"><i class="fa-solid fa-shield-halved"></i> Bebas Iklan</span>
-                <span class="hover:text-slate-300 transition-colors"><i class="fa-solid fa-satellite-dish"></i> GPS High Accuracy</span>
-            </div>
-        </footer>
-
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo"><i class="fa-solid fa-cloud-sun-rain"></i></div>
+      <div>
+        <h1>LuxWeather Indonesia</h1>
+        <div class="sub"><i class="fa-solid fa-location-crosshairs text-blue-500"></i> Presisi GPS & Kecamatan Indonesia</div>
+      </div>
     </div>
+    <div class="actions">
+      <button class="btn" onclick="lockGPSLocation()"><i class="fa-solid fa-crosshairs"></i> <span class="label">Kunci GPS</span></button>
+      <button class="btn" onclick="toggleDark()" id="darkBtn"><i class="fa-solid fa-moon"></i></button>
+    </div>
+  </header>
 
-    <script>
-        // Global variables and state management
-        let hourlyChartInstance = null;
-        let searchTimeout = null;
-        let currentCoords = null;
+  <!-- Search Input & Autocomplete Dropdown -->
+  <div class="searchbox">
+    <div class="searchrow">
+      <input id="search" placeholder="Cari Kecamatan, Kelurahan, Kab/Kota, atau Provinsi..." autocomplete="off">
+      <button class="btn primary" onclick="handleManualSearch()"><i class="fa-solid fa-magnifying-glass"></i> Cari</button>
+    </div>
+    <div id="results" class="results"></div>
+  </div>
 
-        // WMO Weather Interpretation Codes (translated to Indonesian with matching FontAwesome icons)
-        const WMO_CODES = {
-            0: { desc: 'Cerah', icon: 'fa-sun text-yellow-400' },
-            1: { desc: 'Cerah Berawan', icon: 'fa-cloud-sun text-yellow-300' },
-            2: { desc: 'Berawan', icon: 'fa-cloud text-slate-300' },
-            3: { desc: 'Sangat Berawan', icon: 'fa-clouds text-slate-400' },
-            45: { desc: 'Kabut', icon: 'fa-smog text-slate-400' },
-            48: { desc: 'Kabut Bersiul', icon: 'fa-smog text-slate-300' },
-            51: { desc: 'Gerimis Ringan', icon: 'fa-cloud-rain text-blue-300' },
-            53: { desc: 'Gerimis Sedang', icon: 'fa-cloud-rain text-blue-400' },
-            55: { desc: 'Gerimis Lebat', icon: 'fa-cloud-showers-heavy text-blue-500' },
-            61: { desc: 'Hujan Ringan', icon: 'fa-cloud-sun-rain text-blue-400' },
-            63: { desc: 'Hujan Sedang', icon: 'fa-cloud-rain text-blue-500' },
-            65: { desc: 'Hujan Deras', icon: 'fa-cloud-showers-heavy text-blue-600' },
-            80: { desc: 'Hujan Lokal Ringan', icon: 'fa-cloud-sun-rain text-cyan-400' },
-            81: { desc: 'Hujan Lokal Sedang', icon: 'fa-cloud-showers-heavy text-cyan-500' },
-            82: { desc: 'Hujan Lokal Deras', icon: 'fa-cloud-showers-water text-cyan-600' },
-            95: { desc: 'Badai Petir', icon: 'fa-cloud-bolt text-amber-400' },
-            96: { desc: 'Badai Petir & Es Ringan', icon: 'fa-cloud-bolt text-amber-500' },
-            99: { desc: 'Badai Petir & Es Deras', icon: 'fa-cloud-bolt text-red-500' }
-        };
+  <!-- Error Notification Alert -->
+  <div id="errorBox" class="error-box">
+    <span id="errorMsg">Terjadi kesalahan.</span>
+    <button onclick="hideError()" style="background:none;border:none;color:inherit;cursor:pointer"><i class="fa-solid fa-xmark"></i></button>
+  </div>
 
-        // Fallback for unknown WMO weather codes
-        function getWMOInfo(code) {
-            return WMO_CODES[code] || { desc: 'Cuaca Normal', icon: 'fa-cloud text-blue-300' };
-        }
+  <!-- Loading State -->
+  <div id="loading" class="loading">
+    <i class="fa-solid fa-spinner fa-spin fa-2x" style="color:var(--accent);margin-bottom:10px;display:block"></i>
+    Mengkunci lokasi GPS & Memuat data cuaca presisi...
+  </div>
 
-        // Lock Device GPS on Page Refresh / Initial Load
-        window.addEventListener('DOMContentLoaded', () => {
-            setupSearchListeners();
-            lockGPSLocation();
-        });
+  <main id="content" style="display:none">
+    
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="card current" id="weatherCard">
+        <div class="place" id="place">—</div>
+        <div class="time" id="time">—</div>
+        <div class="weathericon" id="icon">🌤️</div>
+        <div class="temp" id="temp">—</div>
+        <div class="desc" id="desc">—</div>
+        
+        <div class="stats">
+          <div class="stat"><b id="feels">—</b><span>Sensasi</span></div>
+          <div class="stat"><b id="humidity">—</b><span>Kelembapan</span></div>
+          <div class="stat"><b id="wind">—</b><span>Angin</span></div>
+        </div>
+      </div>
 
-        // Lock Device GPS with High Accuracy
-        function lockGPSLocation() {
-            showStatusAlert('Mengkunci lokasi GPS perangkat Anda...', 'info');
-            const gpsBtn = document.getElementById('gpsBtn');
-            gpsBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Mengkunci GPS...</span>`;
-            gpsBtn.disabled = true;
+      <div class="card" style="display:flex;flex-col;justify-content:space-between">
+        <div>
+          <div class="sectiontitle">
+            <h2><i class="fa-solid fa-cloud-showers-heavy" style="color:var(--accent)"></i> Prediksi Hujan</h2>
+            <span class="badge" id="rainBadge">—</span>
+          </div>
+          <div id="rainSummary" style="font-size:14px;line-height:1.6">—</div>
+        </div>
+        <div style="margin-top:18px">
+          <div class="sectiontitle"><h2><i class="fa-solid fa-map-pin" style="color:var(--accent)"></i> Koordinat GPS</h2></div>
+          <div id="coords" style="font-size:13px;color:var(--muted)">—</div>
+        </div>
+      </div>
+    </section>
 
-            if (!navigator.geolocation) {
-                showStatusAlert('Geolokasi tidak didukung oleh peramban Anda. Menggunakan lokasi default.', 'error');
-                fallbackToDefaultCity();
-                resetGPSBtn();
-                return;
-            }
+    <!-- Hourly Forecast -->
+    <section class="card">
+      <div class="sectiontitle">
+        <h2><i class="fa-solid fa-clock" style="color:var(--accent)"></i> Prakiraan Hujan & Suhu Per Jam</h2>
+        <span class="badge">24 JAM</span>
+      </div>
+      <div id="hourly" class="hourly"></div>
+    </section>
 
-            // High accuracy GPS lock options
-            const options = {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-            };
+    <!-- 7-Day Forecast -->
+    <section class="card">
+      <div class="sectiontitle">
+        <h2><i class="fa-solid fa-calendar-week" style="color:var(--accent)"></i> Prakiraan 7 Hari</h2>
+        <span class="badge">UPDATE API</span>
+      </div>
+      <div id="daily" class="daygrid"></div>
+    </section>
 
-            navigator.geolocation.getCurrentPosition(
-                async (position) => {
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-                    currentCoords = { lat, lon };
+    <!-- Weather Alert Card -->
+    <section id="alertCard" class="card alert">
+      <h2>⚠️ Peringatan Cuaca</h2>
+      <p id="alertText">Menganalisis kondisi cuaca...</p>
+    </section>
 
-                    try {
-                        // Reverse geocode lat/lon to full Indonesian address down to Kecamatan/Kelurahan
-                        const locationDetails = await reverseGeocodeIndonesia(lat, lon);
-                        await fetchWeatherAndRender(lat, lon, locationDetails);
-                        showStatusAlert(`Lokasi GPS berhasil dikunci: ${locationDetails.shortName}`, 'success');
-                    } catch (err) {
-                        console.error('Geocoding error:', err);
-                        // Fetch weather even if reverse geocode fails
-                        await fetchWeatherAndRender(lat, lon, { 
-                            shortName: `Lat: ${lat.toFixed(3)}, Lon: ${lon.toFixed(3)}`, 
-                            fullName: 'Koordinat GPS Perangkat' 
-                        });
-                        showStatusAlert('GPS dikunci. Menampilkan cuaca berbasis koordinat.', 'info');
-                    } finally {
-                        resetGPSBtn();
-                    }
-                },
-                (error) => {
-                    console.warn('Geolocation Error:', error);
-                    let errMsg = 'Gagal mengakses GPS perangkat.';
-                    if (error.code === error.PERMISSION_DENIED) {
-                        errMsg = 'Izin GPS ditolak. Silakan izinkan akses lokasi pada peramban Anda.';
-                    } else if (error.code === error.POSITION_UNAVAILABLE) {
-                        errMsg = 'Sinyal GPS tidak tersedia. Menggunakan lokasi default.';
-                    } else if (error.code === error.TIMEOUT) {
-                        errMsg = 'Waktu permintaan GPS habis. Menggunakan lokasi default.';
-                    }
-                    showStatusAlert(errMsg, 'error');
-                    fallbackToDefaultCity();
-                    resetGPSBtn();
-                },
-                options
-            );
-        }
+    <!-- Astronomy Sunrise / Sunset -->
+    <section class="card">
+      <div class="sectiontitle">
+        <h2><i class="fa-solid fa-sun" style="color:#b8892d"></i> Astronomi</h2>
+        <span class="badge">MATAHARI</span>
+      </div>
+      <div class="sunbox">
+        <div class="sunitem">
+          <span>🌅 MATAHARI TERBIT</span>
+          <b id="sunrise">—</b>
+        </div>
+        <div class="sunitem">
+          <span>🌇 MATAHARI TERBENAM</span>
+          <b id="sunset">—</b>
+        </div>
+      </div>
+    </section>
 
-        function resetGPSBtn() {
-            const gpsBtn = document.getElementById('gpsBtn');
-            gpsBtn.innerHTML = `<i class="fa-solid fa-location-crosshairs text-base"></i> <span>Kunci GPS</span>`;
-            gpsBtn.disabled = false;
-        }
+    <!-- Interactive Location Map Section (Radar Hujan removed) -->
+    <section class="card">
+      <div class="sectiontitle">
+        <h2><i class="fa-solid fa-map-location-dot" style="color:var(--accent)"></i> Peta Lokasi Wilayah</h2>
+        <span class="badge">INTERAKTIF</span>
+      </div>
+      <div id="map"></div>
+      <div class="mapnote">Peta presisi menggunakan Leaflet + OpenStreetMap contributors.</div>
+    </section>
 
-        // Fallback to Jakarta Pusat if GPS is disabled/denied
-        async function fallbackToDefaultCity() {
-            const lat = -6.1754;
-            const lon = 106.8272;
-            const locationDetails = {
-                shortName: 'Kec. Gambir, Jakarta Pusat',
-                fullName: 'Kec. Gambir, Kota Jakarta Pusat, DKI Jakarta, Indonesia'
-            };
-            document.getElementById('gpsBadge').innerHTML = `<i class="fa-solid fa-map-pin text-amber-400"></i> Lokasi Default`;
-            await fetchWeatherAndRender(lat, lon, locationDetails);
-        }
+  </main>
 
-        // Reverse geocoding lat/lon to Kecamatan, Kelurahan, Kota/Kab, Provinsi
-        async function reverseGeocodeIndonesia(lat, lon) {
-            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=id`;
-            const response = await fetch(url, {
-                headers: { 'User-Agent': 'CuacaNusantaraApp/1.0' }
-            });
-            if (!response.ok) throw new Error('Geocoding request failed');
-            const data = await response.json();
-            
-            const address = data.address || {};
-            return parseAddressDetails(address, data.display_name);
-        }
+  <div class="footer">
+    Data Cuaca: Open-Meteo • Pencarian Wilayah: OpenStreetMap Nominatim • Peta: Leaflet JS
+  </div>
+</div>
 
-        // Format Nominatim address structure specifically for Indonesia
-        function parseAddressDetails(address, displayName) {
-            const kelurahan = address.village || address.suburb || address.neighbourhood || address.quarter || '';
-            const kecamatan = address.subdistrict || address.district || address.county || '';
-            const kotaKab = address.city || address.town || address.municipality || address.regency || address.city_district || '';
-            const provinsi = address.state || '';
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-            let titleParts = [];
-            if (kelurahan) titleParts.push(`Kel. ${kelurahan}`);
-            if (kecamatan) titleParts.push(`Kec. ${kecamatan}`);
-            
-            let shortName = titleParts.length > 0 ? titleParts.join(', ') : (kotaKab || 'Lokasi Terdeteksi');
-            if (kotaKab && !shortName.includes(kotaKab)) {
-                shortName += `, ${kotaKab}`;
-            }
+<script>
+// WMO Weather Interpretation Codes
+const WMO = {
+  0: ["☀️", "Cerah"],
+  1: ["🌤️", "Cerah Berawan"],
+  2: ["⛅", "Berawan Sebagian"],
+  3: ["☁️", "Berawan"],
+  45: ["🌫️", "Berkabut"],
+  48: ["🌫️", "Kabut Bersiul"],
+  51: ["🌦️", "Gerimis Ringan"],
+  53: ["🌦️", "Gerimis Sedang"],
+  55: ["🌧️", "Gerimis Lebat"],
+  61: ["🌦️", "Hujan Ringan"],
+  63: ["🌧️", "Hujan Sedang"],
+  65: ["🌧️", "Hujan Lebat"],
+  71: ["🌨️", "Salju Ringan"],
+  73: ["🌨️", "Salju Sedang"],
+  75: ["❄️", "Salju Lebat"],
+  80: ["🌦️", "Hujan Lokal Ringan"],
+  81: ["🌧️", "Hujan Lokal Sedang"],
+  82: ["⛈️", "Hujan Lokal Deras"],
+  95: ["⛈️", "Badai Petir"],
+  96: ["⛈️", "Badai Petir + Es Ringan"],
+  99: ["⛈️", "Badai Petir + Es Deras"]
+};
 
-            let fullParts = [];
-            if (kelurahan) fullParts.push(`Kelurahan ${kelurahan}`);
-            if (kecamatan) fullParts.push(`Kecamatan ${kecamatan}`);
-            if (kotaKab) fullParts.push(kotaKab);
-            if (provinsi) fullParts.push(provinsi);
+let map, marker;
+let searchTimeout = null;
 
-            let fullName = fullParts.length > 0 ? fullParts.join(', ') : displayName;
+const $ = id => document.getElementById(id);
 
-            return { shortName, fullName };
-        }
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
+}
 
-        // Setup Search Listeners with Debounce for Kecamatan & Kelurahan across Indonesia
-        function setupSearchListeners() {
-            const searchInput = document.getElementById('searchInput');
-            const searchResults = document.getElementById('searchResults');
-            const clearSearchBtn = document.getElementById('clearSearchBtn');
+function toggleDark() {
+  document.body.classList.toggle("dark");
+  const isDark = document.body.classList.contains("dark");
+  localStorage.dark = isDark ? "1" : "0";
+  $("darkBtn").innerHTML = isDark ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+}
+if (localStorage.dark === "1") toggleDark();
 
-            searchInput.addEventListener('input', (e) => {
-                const query = e.target.value.trim();
-                
-                if (query.length > 0) {
-                    clearSearchBtn.classList.remove('hidden');
-                } else {
-                    clearSearchBtn.classList.add('hidden');
-                    searchResults.classList.add('hidden');
-                    return;
-                }
+// Automatic Lock GPS on Page Load / Refresh
+window.addEventListener("DOMContentLoaded", () => {
+  setupSearchAutocomplete();
+  lockGPSLocation();
+});
 
-                if (query.length < 3) return; // Wait until 3 characters typed
+// Lock GPS with High Accuracy
+function lockGPSLocation() {
+  showLoading("Mengkunci lokasi GPS perangkat Anda...");
+  hideError();
 
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => {
-                    executeIndonesiaRegionSearch(query);
-                }, 350);
-            });
+  if (!navigator.geolocation) {
+    showError("Browser Anda tidak mendukung geolokasi GPS.");
+    fallbackDefaultLocation();
+    return;
+  }
 
-            clearSearchBtn.addEventListener('click', () => {
-                searchInput.value = '';
-                clearSearchBtn.classList.add('hidden');
-                searchResults.classList.add('hidden');
-                searchInput.focus();
-            });
+  const options = {
+    enableHighAccuracy: true,
+    timeout: 10000,
+    maximumAge: 0
+  };
 
-            // Close search results on outside click
-            document.addEventListener('click', (e) => {
-                if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-                    searchResults.classList.add('hidden');
-                }
-            });
-        }
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
 
-        // Execute Nominatim search restricted to Indonesia (countrycodes=id)
-        async function executeIndonesiaRegionSearch(query) {
-            const searchResults = document.getElementById('searchResults');
-            searchResults.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Mencari Kecamatan/Desa...</div>`;
-            searchResults.classList.remove('hidden');
+      try {
+        // Reverse Geocoding via Nominatim to get precise Indonesian Kecamatan/Kelurahan
+        const locationName = await reverseGeocodeIndonesia(lat, lon);
+        loadWeather(lat, lon, locationName);
+      } catch (e) {
+        console.warn("Reverse Geocoding failed:", e);
+        loadWeather(lat, lon, `Kecamatan Anda (${lat.toFixed(3)}, ${lon.toFixed(3)})`);
+      }
+    },
+    (err) => {
+      let msg = "Gagal mengunci posisi GPS.";
+      if (err.code === 1) msg = "Izin akses GPS ditolak.";
+      else if (err.code === 2) msg = "Sinyal GPS tidak tersedia.";
+      else if (err.code === 3) msg = "Waktu permintaan GPS habis.";
+      
+      showError(msg + " Mengalihkan ke lokasi default (Makassar).");
+      fallbackDefaultLocation();
+    },
+    options
+  );
+}
 
-            try {
-                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=id&addressdetails=1&limit=8&accept-language=id`;
-                const response = await fetch(url, {
-                    headers: { 'User-Agent': 'CuacaNusantaraApp/1.0' }
-                });
-                
-                if (!response.ok) throw new Error('Pencarian gagal');
-                const results = await response.json();
+// Fallback Location if GPS fails
+function fallbackDefaultLocation() {
+  loadWeather(-5.1477, 119.4327, "Kec. Ujung Pandang, Kota Makassar, Sulawesi Selatan");
+}
 
-                if (results.length === 0) {
-                    searchResults.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">Wilayah / Kecamatan tidak ditemukan</div>`;
-                    return;
-                }
+// Reverse Geocoding Function for Indonesia (Lat/Lon -> Kecamatan & Kelurahan)
+async function reverseGeocodeIndonesia(lat, lon) {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=id`;
+  const r = await fetch(url, { headers: { 'User-Agent': 'LuxWeatherIndonesia/2.0' } });
+  if (!r.ok) throw new Error("Gagal mengambil geocoding.");
+  const data = await r.json();
 
-                searchResults.innerHTML = '';
-                results.forEach(item => {
-                    const parsed = parseAddressDetails(item.address || {}, item.display_name);
-                    
-                    const div = document.createElement('div');
-                    div.className = 'p-3 hover:bg-slate-800 border-b border-slate-800/80 cursor-pointer text-left transition-colors flex items-start gap-2.5';
-                    div.innerHTML = `
-                        <i class="fa-solid fa-location-dot text-blue-400 text-sm mt-0.5"></i>
-                        <div class="overflow-hidden">
-                            <p class="text-sm font-semibold text-slate-100 truncate">${parsed.shortName}</p>
-                            <p class="text-[11px] text-slate-400 truncate">${parsed.fullName}</p>
-                        </div>
-                    `;
-                    div.addEventListener('click', () => {
-                        const lat = parseFloat(item.lat);
-                        const lon = parseFloat(item.lon);
-                        
-                        document.getElementById('searchInput').value = parsed.shortName;
-                        searchResults.classList.add('hidden');
-                        document.getElementById('gpsBadge').innerHTML = `<i class="fa-solid fa-magnifying-glass text-blue-400"></i> Pencarian Wilayah`;
-                        
-                        fetchWeatherAndRender(lat, lon, parsed);
-                        showStatusAlert(`Menampilkan cuaca untuk ${parsed.shortName}`, 'success');
-                    });
-                    searchResults.appendChild(div);
-                });
+  const addr = data.address || {};
+  const kelurahan = addr.village || addr.suburb || addr.neighbourhood || addr.quarter || '';
+  const kecamatan = addr.subdistrict || addr.district || addr.county || '';
+  const kotaKab = addr.city || addr.town || addr.municipality || addr.regency || addr.city_district || '';
+  const provinsi = addr.state || '';
 
-            } catch (err) {
-                console.error('Search Error:', err);
-                searchResults.innerHTML = `<div class="p-3 text-xs text-red-400 text-center">Gagal memuat hasil pencarian</div>`;
-            }
-        }
+  let nameParts = [];
+  if (kelurahan) nameParts.push(`Kel. ${kelurahan}`);
+  if (kecamatan) nameParts.push(`Kec. ${kecamatan}`);
+  if (kotaKab) nameParts.push(kotaKab);
 
-        // Fetch weather data from Open-Meteo API (Free, high quality, no API Key needed)
-        async function fetchWeatherAndRender(lat, lon, locationInfo) {
-            try {
-                // Update Location Display Headers
-                document.getElementById('locationName').innerText = locationInfo.shortName;
-                document.getElementById('locationDetail').innerText = locationInfo.fullName;
+  if (nameParts.length > 0) {
+    return nameParts.join(', ');
+  }
+  return data.display_name ? data.display_name.split(',').slice(0, 3).join(',') : "Lokasi Terdeteksi";
+}
 
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,surface_pressure,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max&timezone=auto`;
-                
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('Gagal mengambil data cuaca');
-                const data = await response.json();
+// Setup Auto-complete Search with Debounce for Kecamatan & Kelurahan
+function setupSearchAutocomplete() {
+  const searchInput = $("search");
+  const resultsDiv = $("results");
 
-                renderCurrentWeather(data);
-                renderHourlyForecast(data.hourly);
-                renderDailyForecast(data.daily);
+  searchInput.addEventListener("input", (e) => {
+    const q = e.target.value.trim();
+    if (q.length < 3) {
+      resultsDiv.style.display = "none";
+      return;
+    }
 
-                // Update Timestamp
-                const now = new Date();
-                document.getElementById('updateTime').innerText = `Diperbarui: ${now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`;
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      executeRegionSearch(q);
+    }, 350);
+  });
 
-            } catch (err) {
-                console.error('Weather Fetch Error:', err);
-                showStatusAlert('Gagal memperbarui data cuaca. Coba lagi nanti.', 'error');
-            }
-        }
+  searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      handleManualSearch();
+    }
+  });
 
-        // Render Hero Current Weather Section
-        function renderCurrentWeather(data) {
-            const current = data.current;
-            const daily = data.daily;
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".searchbox")) {
+      resultsDiv.style.display = "none";
+    }
+  });
+}
 
-            const wmo = getWMOInfo(current.weather_code);
-            
-            document.getElementById('heroIcon').innerHTML = `<i class="fa-solid ${wmo.icon}"></i>`;
-            document.getElementById('heroTemp').innerText = Math.round(current.temperature_2m);
-            document.getElementById('heroCondition').innerText = wmo.desc;
-            
-            document.getElementById('heroApparentTemp').innerText = `${Math.round(current.apparent_temperature)}°C`;
-            
-            const maxTemp = daily.temperature_2m_max[0] !== undefined ? Math.round(daily.temperature_2m_max[0]) : '--';
-            const minTemp = daily.temperature_2m_min[0] !== undefined ? Math.round(daily.temperature_2m_min[0]) : '--';
-            document.getElementById('heroMinMaxTemp').innerText = `${minTemp}° / ${maxTemp}°`;
-            
-            const todayRainChance = daily.precipitation_probability_max[0] !== undefined ? daily.precipitation_probability_max[0] : 0;
-            document.getElementById('heroRainChance').innerText = `${todayRainChance}%`;
+function handleManualSearch() {
+  const q = $("search").value.trim();
+  if (q.length >= 3) {
+    executeRegionSearch(q);
+  }
+}
 
-            // Quick Metrics
-            document.getElementById('metricHumidity').innerText = `${current.relative_humidity_2m}%`;
-            document.getElementById('metricWind').innerText = `${Math.round(current.wind_speed_10m)} km/j`;
-            
-            const maxUV = daily.uv_index_max[0] !== undefined ? daily.uv_index_max[0].toFixed(1) : '--';
-            document.getElementById('metricUV').innerText = maxUV;
-            
-            document.getElementById('metricPressure').innerText = `${Math.round(current.surface_pressure)} hPa`;
-        }
+// Search Kecamatan/Desa/Kota/Provinsi across Indonesia via OpenStreetMap Nominatim
+async function executeRegionSearch(query) {
+  const resultsDiv = $("results");
+  resultsDiv.style.display = "block";
+  resultsDiv.innerHTML = '<div class="loading" style="padding:15px;font-size:13px"><i class="fa-solid fa-spinner fa-spin"></i> Mencari Kecamatan / Wilayah di Indonesia...</div>';
 
-        // Render Hourly Forecast Cards & Chart.js Graph
-        function renderHourlyForecast(hourly) {
-            const container = document.getElementById('hourlyCardsContainer');
-            container.innerHTML = '';
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=id&addressdetails=1&limit=10&accept-language=id`;
+    const res = await fetch(url, { headers: { 'User-Agent': 'LuxWeatherIndonesia/2.0' } });
+    if (!res.ok) throw new Error("Pencarian gagal");
+    const list = await res.json();
 
-            const times = hourly.time;
-            const temps = hourly.temperature_2m;
-            const rainChances = hourly.precipitation_probability;
-            const weatherCodes = hourly.weather_code;
+    if (!list.length) {
+      resultsDiv.innerHTML = '<div class="result" style="cursor:default;color:var(--muted)">Wilayah/Kecamatan tidak ditemukan.</div>';
+      return;
+    }
 
-            // Get current hour index
-            const now = new Date();
-            const currentHourISO = now.toISOString().slice(0, 13);
-            
-            let startIndex = times.findIndex(t => t.startsWith(currentHourISO));
-            if (startIndex === -1) startIndex = 0;
+    resultsDiv.innerHTML = list.map(item => {
+      const addr = item.address || {};
+      const kelurahan = addr.village || addr.suburb || addr.neighbourhood || '';
+      const kecamatan = addr.subdistrict || addr.district || addr.county || '';
+      const kotaKab = addr.city || addr.town || addr.municipality || addr.regency || '';
+      const provinsi = addr.state || '';
 
-            const next24Times = [];
-            const next24Temps = [];
-            const next24Rain = [];
+      let title = item.name;
+      if (kecamatan && !title.includes(kecamatan)) title = `Kec. ${kecamatan}, ${title}`;
 
-            for (let i = startIndex; i < Math.min(startIndex + 24, times.length); i++) {
-                const dateObj = new Date(times[i]);
-                const timeLabel = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-                const temp = Math.round(temps[i]);
-                const rain = rainChances[i] || 0;
-                const wmo = getWMOInfo(weatherCodes[i]);
+      let subtitle = [kelurahan, kotaKab, provinsi].filter(Boolean).join(', ');
 
-                next24Times.push(timeLabel);
-                next24Temps.push(temp);
-                next24Rain.push(rain);
+      const lat = parseFloat(item.lat);
+      const lon = parseFloat(item.lon);
+      const displayName = `${title}${kotaKab ? ', ' + kotaKab : ''}`;
 
-                // Create hourly card
-                const card = document.createElement('div');
-                card.className = 'glass-card glass-card-hover min-w-[85px] p-3 rounded-2xl flex flex-col items-center justify-between text-center flex-shrink-0 border border-slate-700/50';
-                card.innerHTML = `
-                    <span class="text-xs text-slate-400 font-medium">${i === startIndex ? 'Sekarang' : timeLabel}</span>
-                    <div class="my-2 text-xl text-yellow-400">
-                        <i class="fa-solid ${wmo.icon}"></i>
-                    </div>
-                    <span class="text-base font-bold text-white">${temp}°C</span>
-                    <span class="text-[10px] text-blue-400 mt-1 flex items-center gap-0.5">
-                        <i class="fa-solid fa-droplet text-[9px]"></i> ${rain}%
-                    </span>
-                `;
-                container.appendChild(card);
-            }
+      return `
+        <div class="result" onclick='selectSearchResult(${lat}, ${lon}, "${esc(displayName)}")'>
+          <b><i class="fa-solid fa-location-dot text-blue-500 mr-1"></i> ${esc(title)}</b>
+          <small>${esc(subtitle || item.display_name)}</small>
+        </div>
+      `;
+    }).join("");
 
-            // Draw/Update Chart.js Line Graph
-            drawHourlyChart(next24Times, next24Temps, next24Rain);
-        }
+  } catch (err) {
+    console.error("Search Error:", err);
+    resultsDiv.innerHTML = '<div class="result" style="color:#ef4444">Gagal memuat hasil pencarian.</div>';
+  }
+}
 
-        // Render Chart.js Graph
-        function drawHourlyChart(labels, temps, rain) {
-            const ctx = document.getElementById('hourlyChart').getContext('2d');
+function selectSearchResult(lat, lon, name) {
+  $("results").style.display = "none";
+  $("search").value = name;
+  loadWeather(lat, lon, name);
+}
 
-            if (hourlyChartInstance) {
-                hourlyChartInstance.destroy();
-            }
+// Fetch Weather Data from Open-Meteo
+async function loadWeather(lat, lon, name) {
+  showLoading("Mengambil prakiraan cuaca terbaru...");
+  $("errorBox").style.display = "none";
 
-            hourlyChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Suhu (°C)',
-                            data: temps,
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                            fill: true,
-                            tension: 0.4,
-                            borderWidth: 2,
-                            pointBackgroundColor: '#60a5fa',
-                            pointRadius: 3,
-                            yAxisID: 'y'
-                        },
-                        {
-                            label: 'Peluang Hujan (%)',
-                            data: rain,
-                            borderColor: '#38bdf8',
-                            borderDash: [4, 4],
-                            backgroundColor: 'transparent',
-                            fill: false,
-                            tension: 0.3,
-                            borderWidth: 1.5,
-                            pointRadius: 0,
-                            yAxisID: 'y1'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            labels: { color: '#94a3b8', font: { size: 11 } }
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                        }
-                    },
-                    scales: {
-                        x: {
-                            grid: { display: false },
-                            ticks: { color: '#64748b', font: { size: 10 } }
-                        },
-                        y: {
-                            type: 'linear',
-                            display: true,
-                            position: 'left',
-                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                            ticks: { color: '#94a3b8', font: { size: 10 } }
-                        },
-                        y1: {
-                            type: 'linear',
-                            display: false,
-                            position: 'right',
-                            min: 0,
-                            max: 100,
-                            grid: { drawOnChartArea: false }
-                        }
-                    }
-                }
-            });
-        }
+  const params = new URLSearchParams({
+    latitude: lat,
+    longitude: lon,
+    current: "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m",
+    hourly: "temperature_2m,precipitation_probability,precipitation,weather_code",
+    daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,sunrise,sunset",
+    timezone: "auto",
+    forecast_days: "7"
+  });
 
-        // Render 7-Day Daily Forecast Component
-        function renderDailyForecast(daily) {
-            const container = document.getElementById('dailyForecastContainer');
-            container.innerHTML = '';
+  const url = "https://api.open-meteo.com/v1/forecast?" + params.toString();
 
-            const dates = daily.time;
-            const weatherCodes = daily.weather_code;
-            const maxTemps = daily.temperature_2m_max;
-            const minTemps = daily.temperature_2m_min;
-            const rainChances = daily.precipitation_probability_max;
+  try {
+    const r = await fetch(url, { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const d = await r.json();
+    if (!d.current || !d.hourly || !d.daily) throw new Error("Data API tidak lengkap");
+    render(d, lat, lon, name);
+  } catch (err) {
+    console.error("Load Weather Error:", err);
+    showError("Gagal mengambil data cuaca. Periksa koneksi internet Anda.");
+    $("loading").style.display = "none";
+  }
+}
 
-            const daysIndonesian = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+// Render Weather UI Components
+function render(d, lat, lon, name) {
+  const c = d.current;
+  const inf = WMO[c.weather_code] || ["🌡️", "Tidak Diketahui"];
+  const dt = new Date(c.time);
 
-            dates.forEach((dateStr, idx) => {
-                const dateObj = new Date(dateStr);
-                const dayName = idx === 0 ? 'Hari Ini' : daysIndonesian[dateObj.getDay()];
-                const formattedDate = `${dateObj.getDate()} ${dateObj.toLocaleDateString('id-ID', { month: 'short' })}`;
-                
-                const wmo = getWMOInfo(weatherCodes[idx]);
-                const maxT = Math.round(maxTemps[idx]);
-                const minT = Math.round(minTemps[idx]);
-                const rain = rainChances[idx] || 0;
+  $("place").textContent = name;
+  $("time").textContent = dt.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) + " • " + c.time.slice(11, 16) + " WIB";
+  $("icon").textContent = inf[0];
+  $("temp").textContent = Math.round(c.temperature_2m) + "°C";
+  $("desc").textContent = inf[1];
+  $("feels").textContent = Math.round(c.apparent_temperature) + "°C";
+  $("humidity").textContent = c.relative_humidity_2m + "%";
+  $("wind").textContent = Math.round(c.wind_speed_10m) + " km/j";
+  $("coords").textContent = `${lat.toFixed(5)}°, ${lon.toFixed(5)}°`;
 
-                const row = document.createElement('div');
-                row.className = 'glass-card p-3 rounded-2xl flex items-center justify-between gap-2 hover:bg-slate-800/60 transition-colors border border-slate-700/40';
-                row.innerHTML = `
-                    <div class="w-24">
-                        <p class="text-xs font-bold text-slate-100">${dayName}</p>
-                        <p class="text-[10px] text-slate-400">${formattedDate}</p>
-                    </div>
+  // Sun time formatting
+  const fmt = t => new Date(t).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+  if (d.daily.sunrise?.[0]) $("sunrise").textContent = fmt(d.daily.sunrise[0]) + " WIB";
+  if (d.daily.sunset?.[0]) $("sunset").textContent = fmt(d.daily.sunset[0]) + " WIB";
 
-                    <div class="flex items-center gap-2 flex-1 justify-center">
-                        <i class="fa-solid ${wmo.icon} text-lg"></i>
-                        <span class="text-xs text-slate-300 hidden sm:inline">${wmo.desc}</span>
-                    </div>
+  // Hourly Forecast Rendering
+  const h = d.hourly;
+  const nowIndex = Math.max(0, h.time.findIndex(t => t >= c.time));
+  const end = Math.min(nowIndex + 24, h.time.length);
+  let rainMax = 0, rainHour = "—", hs = "";
 
-                    <div class="flex items-center gap-2 text-xs">
-                        <span class="text-blue-400 text-[11px]"><i class="fa-solid fa-droplet text-[9px]"></i> ${rain}%</span>
-                        <span class="font-bold text-slate-100">${minT}°</span>
-                        <div class="w-12 h-1.5 bg-slate-700 rounded-full overflow-hidden hidden sm:block">
-                            <div class="h-full bg-gradient-to-r from-blue-400 to-yellow-400 rounded-full" style="width: 100%"></div>
-                        </div>
-                        <span class="font-bold text-white">${maxT}°</span>
-                    </div>
-                `;
-                container.appendChild(row);
-            });
-        }
+  for (let i = nowIndex; i < end; i++) {
+    const infh = WMO[h.weather_code[i]] || ["🌡️", "-"];
+    const p = Number(h.precipitation_probability[i] ?? 0);
+    if (p > rainMax) {
+      rainMax = p;
+      rainHour = h.time[i].slice(11, 16);
+    }
+    hs += `
+      <div class="hour">
+        <small>${h.time[i].slice(11, 16)}</small>
+        <div class="hi">${infh[0]}</div>
+        <b>${Math.round(h.temperature_2m[i])}°C</b>
+        <div class="rain"><i class="fa-solid fa-droplet"></i> ${p}%</div>
+      </div>`;
+  }
+  $("hourly").innerHTML = hs;
+  $("rainBadge").textContent = rainMax + "%";
 
-        // UI Helper for status alert messages
-        function showStatusAlert(msg, type = 'info') {
-            const alertBox = document.getElementById('statusAlert');
-            const alertMsg = document.getElementById('statusMessage');
-            const alertIcon = document.getElementById('statusIcon');
+  // Rain Summary Card Text
+  $("rainSummary").innerHTML = rainMax >= 60
+    ? `Peluang hujan tertinggi 24 jam ke depan: <b style="color:var(--accent)">${rainMax}%</b> sekitar pukul <b>${rainHour} WIB</b>.<br><span style="color:var(--muted)">Siapkan payung atau jas hujan sebelum beraktivitas.</span>`
+    : rainMax >= 30
+    ? `Peluang hujan sedang: <b>${rainMax}%</b> sekitar pukul <b>${rainHour} WIB</b>.`
+    : `Kondisi cenderung cerah/berawan. Peluang hujan maksimum 24 jam hanya <b>${rainMax}%</b>.`;
 
-            alertMsg.innerText = msg;
-            alertBox.classList.remove('hidden', 'bg-blue-900/40', 'border-blue-500/50', 'bg-red-900/40', 'border-red-500/50', 'bg-emerald-900/40', 'border-emerald-500/50');
+  // Weather Alert Logic
+  const severe = c.weather_code >= 95;
+  const heavy = [65, 67, 82].includes(c.weather_code);
+  const alert = $("alertCard");
+  alert.classList.remove("safe");
 
-            if (type === 'error') {
-                alertBox.classList.add('bg-red-900/40', 'border-red-500/50', 'text-red-200');
-                alertIcon.className = 'fa-solid fa-circle-exclamation text-red-400 text-lg';
-            } else if (type === 'success') {
-                alertBox.classList.add('bg-emerald-900/40', 'border-emerald-500/50', 'text-emerald-200');
-                alertIcon.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
-            } else {
-                alertBox.classList.add('bg-blue-900/40', 'border-blue-500/50', 'text-blue-200');
-                alertIcon.className = 'fa-solid fa-circle-info text-blue-400 text-lg';
-            }
-        }
+  if (severe) {
+    $("alertText").innerHTML = "<b>Peringatan Badai Petir!</b> Terdeteksi potensi badai petir di sekitar wilayah Anda. Hindari berada di area terbuka.";
+  } else if (heavy) {
+    $("alertText").innerHTML = "<b>Peringatan Hujan Lebat!</b> Waspadai potensi genangan air dan jarak pandang yang terbatas.";
+  } else if (rainMax >= 70) {
+    $("alertText").innerHTML = `<b>Peluang Hujan Tinggi.</b> Dalam 24 jam ke depan peluang hujan mencapai <b>${rainMax}%</b> sekitar pukul <b>${rainHour} WIB</b>.`;
+  } else {
+    alert.classList.add("safe");
+    $("alertText").innerHTML = `<b>Cuaca Cenderung Aman.</b> Tidak ada peringatan cuaca ekstrem saat ini. Peluang hujan maksimum <b>${rainMax}%</b>.`;
+  }
 
-        function hideStatusAlert() {
-            document.getElementById('statusAlert').classList.add('hidden');
-        }
-    </script>
+  // Daily 7-Day Forecast Rendering
+  let ds = "";
+  d.daily.time.forEach((t, i) => {
+    const x = WMO[d.daily.weather_code[i]] || ["🌡️", "-"];
+    const dayName = new Date(t + "T12:00:00").toLocaleDateString("id-ID", { weekday: "short" });
+    ds += `
+      <div class="day">
+        <small>${i === 0 ? "Hari Ini" : dayName}</small>
+        <div class="di">${x[0]}</div>
+        <b>${Math.round(d.daily.temperature_2m_max[i])}° / ${Math.round(d.daily.temperature_2m_min[i])}°</b><br>
+        <small style="color:var(--accent)"><i class="fa-solid fa-droplet"></i> ${d.daily.precipitation_probability_max[i] ?? 0}%</small>
+      </div>`;
+  });
+  $("daily").innerHTML = ds;
+
+  $("loading").style.display = "none";
+  $("content").style.display = "block";
+
+  // Initialize Map View
+  initMap(lat, lon, name);
+}
+
+// Render Interactive Location Map
+function initMap(lat, lon, name) {
+  if (!map) {
+    map = L.map("map").setView([lat, lon], 13);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+  } else {
+    map.setView([lat, lon], 13);
+  }
+
+  if (marker) marker.remove();
+  marker = L.marker([lat, lon]).addTo(map).bindPopup(`<b>${esc(name)}</b>`).openPopup();
+  
+  setTimeout(() => map.invalidateSize(), 200);
+}
+
+// UI State Helpers
+function showLoading(msg) {
+  $("loading").style.display = "block";
+  $("loading").innerHTML = `<i class="fa-solid fa-spinner fa-spin fa-2x" style="color:var(--accent);margin-bottom:10px;display:block"></i> ${msg}`;
+  $("content").style.display = "none";
+}
+
+function showError(msg) {
+  $("errorBox").style.display = "flex";
+  $("errorMsg").innerText = msg;
+}
+
+function hideError() {
+  $("errorBox").style.display = "none";
+}
+</script>
 </body>
 </html>
